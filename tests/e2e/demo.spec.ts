@@ -1,5 +1,29 @@
 import { expect, test } from "@playwright/test";
 
+test("login con tab Accedi e Registrati", async ({ page }) => {
+  await page.goto("/login");
+
+  const signInTab = page.getByRole("tab", { name: "Accedi" });
+  const signUpTab = page.getByRole("tab", { name: "Registrati" });
+  await expect(signInTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Entra in Fleai." })).toBeVisible();
+
+  await signUpTab.click();
+  await expect(signUpTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Crea il tuo spazio." })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Crea account con email/i })).toBeVisible();
+
+  await signUpTab.press("ArrowLeft");
+  await expect(signInTab).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Entra in Fleai." })).toBeVisible();
+
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 800 : 1000 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `overflow login a ${width}px`).toBeLessThanOrEqual(1);
+  }
+});
+
 test("Hunting demo: foto, ripristino e report", async ({ page }) => {
   await page.goto("/app/hunt/new");
   await expect(page.getByRole("heading", { name: /VALE LA PENA/i })).toBeVisible();

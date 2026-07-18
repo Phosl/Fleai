@@ -26,6 +26,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .idea
-.vscode
+.vscode/*
+!.vscode/settings.json
 *.tsbuildinfo
 next-env.d.ts

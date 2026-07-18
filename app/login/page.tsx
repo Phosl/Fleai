@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth-form";
 import { Logo } from "@/components/logo";
 
-export const metadata: Metadata = { title: "Accedi" };
+export const metadata: Metadata = { title: "Accedi o registrati" };
 
 export default function LoginPage() {
   return (

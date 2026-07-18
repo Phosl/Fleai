@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { comparableSchema, identificationSchema, listingDraftSchema } from "@/lib/contracts";
 
-const generatedComparableSchema = comparableSchema.omit({ id: true });
+const generatedComparableSchema = comparableSchema
+  .omit({ id: true, url: true })
+  .extend({ url: z.string() });
 
 export const inspectionResultSchema = z.object({
   identification: identificationSchema,

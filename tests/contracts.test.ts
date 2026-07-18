@@ -20,6 +20,7 @@ describe("contratti strutturati", () => {
 
   it("converte gli schemi generati nel formato Structured Outputs di OpenAI", () => {
     expect(() => zodTextFormat(inspectionResultSchema, "fleai_item_inspection")).not.toThrow();
-    expect(() => zodTextFormat(marketSynthesisSchema, "fleai_market_synthesis")).not.toThrow();
+    const marketFormat = zodTextFormat(marketSynthesisSchema, "fleai_market_synthesis");
+    expect(JSON.stringify(marketFormat)).not.toContain('"format":"uri"');
   });
 });

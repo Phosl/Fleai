@@ -9,6 +9,7 @@ import { generateMarketingImages } from "@/lib/ai/images";
 import { createSocialRender } from "@/lib/social/creatomate";
 import { formatCurrency } from "@/lib/format";
 import { providerErrorCode } from "@/lib/ai/provider-errors";
+import { shouldRetryResearchAfterSynthesis } from "@/lib/ai/model-routing";
 
 export class RunProcessingError extends Error {
   constructor(
@@ -98,16 +99,31 @@ async function processHunting(run: {
   }
 
   await setProgress(run.id, "researching", 55);
-  const research = await researchComparables({ userId: run.owner_id, inspection: inspection.result });
-  await setProgress(run.id, "synthesizing", 82);
-  const synthesized = await synthesizeHuntingReport({
-    userId: run.owner_id,
-    inspection: inspection.result,
-    researchNarrative: research.narrative,
-    sources: research.sources,
-    askingPrice: input.askingPrice ?? (item.asking_price_cents ?? 0) / 100,
-    extraCosts: input.extraCosts ?? item.extra_costs_cents / 100,
-  });
+  let research = await researchComparables({ userId: run.owner_id, inspection: inspection.result });
+  const synthesize = () => synthesizeHuntingReport({
+      userId: run.owner_id,
+      inspection: inspection.result,
+      researchNarrative: research.narrative,
+      sources: research.sources,
+      askingPrice: input.askingPrice ?? (item.asking_price_cents ?? 0) / 100,
+      extraCosts: input.extraCosts ?? item.extra_costs_cents / 100,
+    });
+
+  await setProgress(run.id, "synthesizing", 75);
+  let synthesized = await synthesize();
+  if (
+    research.fallbackAvailable &&
+    !research.usedFallback &&
+    shouldRetryResearchAfterSynthesis(synthesized.report.comparables)
+  ) {
+    await setProgress(run.id, "researching", 82);
+    research = await researchComparables(
+      { userId: run.owner_id, inspection: inspection.result },
+      { forceFallback: true },
+    );
+    await setProgress(run.id, "synthesizing", 90);
+    synthesized = await synthesize();
+  }
 
   const { data: storedReport, error: reportError } = await admin
     .from("hunting_reports")

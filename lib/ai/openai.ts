@@ -6,6 +6,11 @@ import { zodTextFormat } from "openai/helpers/zod";
 import type { ComparableDTO, HuntingReportDTO, ListingDraftDTO } from "@/lib/contracts";
 import { huntingReportSchema } from "@/lib/contracts";
 import { buildReport } from "@/lib/hunting-rules";
+import {
+  hasDistinctFallbackModel,
+  shouldEscalateInspection,
+  shouldEscalateResearch,
+} from "@/lib/ai/model-routing";
 import { inspectionResultSchema, listingGenerationSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 import type { InspectionResult } from "@/lib/ai/schemas";
 import { serverEnv } from "@/lib/env/server";
@@ -44,16 +49,24 @@ export async function moderateSubmission(imageUrls: string[], notes: string) {
   };
 }
 
-export async function inspectItem(input: {
+type ItemInspectionInput = {
   userId: string;
   imageUrls: string[];
   notes: string;
   categoryHint: string;
-}) {
+};
+
+type ModelRouteMetadata = {
+  model: string;
+  usedFallback: boolean;
+  fallbackAvailable: boolean;
+};
+
+async function inspectItemWithModel(input: ItemInspectionInput, model: string, fallbackPass: boolean) {
   const response = await client().responses.parse({
-    model: serverEnv.openAiAnalysisModel,
+    model,
     store: false,
-    reasoning: { effort: "low" },
+    reasoning: { effort: fallbackPass ? "medium" : "low" },
     safety_identifier: safetyIdentifier(input.userId),
     instructions: [
       "Sei l'ispettore prudente di Fleai, un assistente italiano per oggetti da mercatino.",
@@ -75,6 +88,30 @@ export async function inspectItem(input: {
   return { result: response.output_parsed, requestId: response.id };
 }
 
+export async function inspectItem(input: ItemInspectionInput) {
+  const fallbackAvailable = hasDistinctFallbackModel(
+    serverEnv.openAiFastModel,
+    serverEnv.openAiAnalysisModel,
+  );
+  const fast = await inspectItemWithModel(input, serverEnv.openAiFastModel, false);
+  if (!fallbackAvailable || !shouldEscalateInspection(fast.result)) {
+    return {
+      ...fast,
+      model: serverEnv.openAiFastModel,
+      usedFallback: false,
+      fallbackAvailable,
+    } satisfies typeof fast & ModelRouteMetadata;
+  }
+
+  const fallback = await inspectItemWithModel(input, serverEnv.openAiAnalysisModel, true);
+  return {
+    ...fallback,
+    model: serverEnv.openAiAnalysisModel,
+    usedFallback: true,
+    fallbackAvailable,
+  } satisfies typeof fallback & ModelRouteMetadata;
+}
+
 type CitedSource = { title: string; url: string };
 
 function extractCitedSources(response: Awaited<ReturnType<OpenAI["responses"]["create"]>>) {
@@ -94,18 +131,24 @@ function extractCitedSources(response: Awaited<ReturnType<OpenAI["responses"]["c
   return [...sources.values()];
 }
 
-export async function researchComparables(input: {
+type ComparableResearchInput = {
   userId: string;
   inspection: InspectionResult;
-}) {
+};
+
+async function researchComparablesWithModel(
+  input: ComparableResearchInput,
+  model: string,
+  fallbackPass: boolean,
+) {
   const response = await client().responses.create({
-    model: serverEnv.openAiAnalysisModel,
+    model,
     store: false,
-    reasoning: { effort: "low" },
+    reasoning: { effort: fallbackPass ? "medium" : "low" },
     safety_identifier: safetyIdentifier(input.userId),
     tools: [{
       type: "web_search",
-      search_context_size: "high",
+      search_context_size: fallbackPass ? "high" : "medium",
       user_location: { type: "approximate", country: "IT", region: "Italia", timezone: "Europe/Rome" },
     }],
     tool_choice: "required",
@@ -119,6 +162,40 @@ export async function researchComparables(input: {
     input: `Identificazione prudente: ${JSON.stringify(input.inspection.identification)}. Trova fino a 8 comparabili e riporta titolo, prezzo, valuta, tipo di prezzo, condizione, data osservazione e somiglianza motivata.`,
   });
   return { narrative: response.output_text, sources: extractCitedSources(response), requestId: response.id };
+}
+
+export async function researchComparables(
+  input: ComparableResearchInput,
+  options: { forceFallback?: boolean } = {},
+) {
+  const fallbackAvailable = hasDistinctFallbackModel(
+    serverEnv.openAiFastModel,
+    serverEnv.openAiAnalysisModel,
+  );
+  const startWithFallback = Boolean(options.forceFallback && fallbackAvailable);
+  const firstModel = startWithFallback ? serverEnv.openAiAnalysisModel : serverEnv.openAiFastModel;
+  const first = await researchComparablesWithModel(input, firstModel, startWithFallback);
+
+  if (startWithFallback || !fallbackAvailable || !shouldEscalateResearch(first.sources)) {
+    return {
+      ...first,
+      model: firstModel,
+      usedFallback: startWithFallback,
+      fallbackAvailable,
+    } satisfies typeof first & ModelRouteMetadata;
+  }
+
+  const fallback = await researchComparablesWithModel(
+    input,
+    serverEnv.openAiAnalysisModel,
+    true,
+  );
+  return {
+    ...fallback,
+    model: serverEnv.openAiAnalysisModel,
+    usedFallback: true,
+    fallbackAvailable,
+  } satisfies typeof fallback & ModelRouteMetadata;
 }
 
 function keepOnlyCitedComparables(comparables: ComparableDTO[], sources: CitedSource[]) {

@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { calculateHuntingDecision, calculateReliability, calculateSuggestedMaxBuy, validEuroComparables } from "@/lib/hunting-rules";
+import { calculateHuntingDecision, calculateReliability, calculateSuggestedMaxBuy, deduplicateComparablesByUrl, validEuroComparables } from "@/lib/hunting-rules";
 
 describe("regole Hunting", () => {
+  it("deduplica i comparabili per URL conservando quello più simile", () => {
+    expect(deduplicateComparablesByUrl([
+      { url: "https://example.com/a", similarity: 55, title: "A" },
+      { url: "https://example.com/a", similarity: 80, title: "A migliore" },
+      { url: "https://example.com/b", similarity: 70, title: "B" },
+    ])).toEqual([
+      { url: "https://example.com/a", similarity: 80, title: "A migliore" },
+      { url: "https://example.com/b", similarity: 70, title: "B" },
+    ]);
+  });
+
   it("applica insieme margine minimo e ROI minimo alla stima bassa", () => {
     expect(calculateSuggestedMaxBuy(100, 10)).toBe(69);
     expect(calculateHuntingDecision({ askingPrice: 69, extraCosts: 10, resaleLow: 100, confidenceScore: 80 })).toMatchObject({ recommendation: "buy_to_resell", estimatedMargin: 21 });

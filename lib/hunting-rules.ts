@@ -82,6 +82,19 @@ export function validEuroComparables(comparables: ComparableDTO[]) {
   );
 }
 
+export function deduplicateComparablesByUrl<T extends Pick<ComparableDTO, "url" | "similarity">>(
+  comparables: T[],
+) {
+  const byUrl = new Map<string, T>();
+  for (const comparable of comparables) {
+    const current = byUrl.get(comparable.url);
+    if (!current || comparable.similarity > current.similarity) {
+      byUrl.set(comparable.url, comparable);
+    }
+  }
+  return [...byUrl.values()];
+}
+
 export function buildReport(input: {
   base: Omit<
     HuntingReportDTO,

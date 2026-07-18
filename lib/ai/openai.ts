@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { ComparableDTO, HuntingReportDTO, ListingDraftDTO } from "@/lib/contracts";
 import { huntingReportSchema } from "@/lib/contracts";
-import { buildReport } from "@/lib/hunting-rules";
+import { buildReport, deduplicateComparablesByUrl } from "@/lib/hunting-rules";
 import {
   hasDistinctFallbackModel,
   shouldEscalateInspection,
@@ -201,11 +201,12 @@ export async function researchComparables(
 
 function keepOnlyCitedComparables(comparables: ComparableDTO[], sources: CitedSource[]) {
   const byUrl = new Map(sources.map((source) => [source.url, source]));
-  return comparables.flatMap((comparable) => {
+  const citedComparables = comparables.flatMap((comparable) => {
     const cited = byUrl.get(comparable.url);
     if (!cited) return [];
     return [{ ...comparable, sourceName: comparable.sourceName || cited.title }];
   });
+  return deduplicateComparablesByUrl(citedComparables);
 }
 
 export async function synthesizeHuntingReport(input: {

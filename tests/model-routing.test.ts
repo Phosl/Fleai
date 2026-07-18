@@ -7,23 +7,21 @@ import {
 } from "@/lib/ai/model-routing";
 
 describe("routing modelli AI", () => {
-  it("passa al modello più capace solo quando il riconoscimento rapido è debole", () => {
-    expect(shouldEscalateInspection({ identificationSpecificity: 49 })).toBe(true);
-    expect(shouldEscalateInspection({ identificationSpecificity: 50 })).toBe(false);
+  it("passa al modello più capace solo quando il riconoscimento rapido non identifica l'oggetto", () => {
+    expect(shouldEscalateInspection({ identificationSpecificity: 19 })).toBe(true);
+    expect(shouldEscalateInspection({ identificationSpecificity: 35 })).toBe(false);
+    expect(shouldEscalateInspection({
+      identificationSpecificity: 80,
+      identification: { label: "Oggetto non identificato" },
+    })).toBe(true);
   });
 
-  it("richiede almeno due fonti web distinte", () => {
-    expect(shouldEscalateResearch([
-      { url: "https://example.com/a" },
-      { url: "https://example.com/a" },
-    ])).toBe(true);
-    expect(shouldEscalateResearch([
-      { url: "https://example.com/a" },
-      { url: "https://example.com/b" },
-    ])).toBe(false);
+  it("usa il fallback di ricerca soltanto quando Luna non trova fonti", () => {
+    expect(shouldEscalateResearch([])).toBe(true);
+    expect(shouldEscalateResearch([{ url: "https://example.com/a" }])).toBe(false);
   });
 
-  it("riprova la ricerca se la sintesi non conserva due comparabili EUR validi", () => {
+  it("riprova la ricerca se la sintesi non conserva alcun comparabile EUR valido", () => {
     const comparable = {
       title: "Oggetto simile",
       url: "https://example.com/a",
@@ -35,11 +33,8 @@ describe("routing modelli AI", () => {
       observedAt: "2026-07-18",
       similarity: 70,
     };
-    expect(shouldRetryResearchAfterSynthesis([comparable])).toBe(true);
-    expect(shouldRetryResearchAfterSynthesis([
-      comparable,
-      { ...comparable, url: "https://example.com/b" },
-    ])).toBe(false);
+    expect(shouldRetryResearchAfterSynthesis([])).toBe(true);
+    expect(shouldRetryResearchAfterSynthesis([comparable])).toBe(false);
   });
 
   it("non duplica chiamate quando modello rapido e fallback coincidono", () => {

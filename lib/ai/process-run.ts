@@ -8,7 +8,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { generateMarketingImages } from "@/lib/ai/images";
 import { createSocialRender } from "@/lib/social/creatomate";
 import { formatCurrency } from "@/lib/format";
-import { providerErrorCode } from "@/lib/ai/provider-errors";
+import { providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { shouldRetryResearchAfterSynthesis } from "@/lib/ai/model-routing";
 
 export class RunProcessingError extends Error {
@@ -371,15 +371,25 @@ export async function processAnalysisRun(runId: string) {
       throw cause;
     }
     const terminal = attempt >= 3;
+    const errorCode = providerErrorCode(cause);
+    console.error(JSON.stringify({
+      scope: "analysis_run",
+      event: "attempt_failed",
+      runId: run.id,
+      kind: run.kind,
+      attempt,
+      errorCode,
+      ...providerErrorMetadata(cause),
+    }));
     await admin.from("analysis_runs").update({
       status: terminal ? "failed" : "queued",
       progress: terminal ? 100 : 0,
-      error_code: providerErrorCode(cause),
+      error_code: errorCode,
       completed_at: terminal ? new Date().toISOString() : null,
     }).eq("id", run.id);
     if (terminal && run.kind === "social_pack") {
-      await admin.from("social_packs").update({ status: "failed", error_code: providerErrorCode(cause) }).eq("run_id", run.id);
+      await admin.from("social_packs").update({ status: "failed", error_code: errorCode }).eq("run_id", run.id);
     }
-    throw new RunProcessingError(providerErrorCode(cause), terminal);
+    throw new RunProcessingError(errorCode, terminal);
   }
 }

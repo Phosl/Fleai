@@ -1,8 +1,12 @@
+import { after } from "next/server";
 import { createAiRunSchema } from "@/lib/contracts";
 import { apiErrorResponse, requireUser } from "@/lib/api/auth";
 import { requireOwnedItem } from "@/lib/api/ownership";
 import { assertQuota } from "@/lib/ai/quota";
 import type { Json } from "@/lib/supabase/database.types";
+import { logWorkerTriggerFailure, triggerAiWorker } from "@/lib/ai/worker-trigger";
+
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   try {
@@ -36,6 +40,13 @@ export async function POST(request: Request) {
     if (runError) throw runError;
     const { error: queueError } = await supabase.rpc("enqueue_ai_run", { run_id: run.id });
     if (queueError) throw queueError;
+    after(async () => {
+      try {
+        await triggerAiWorker();
+      } catch (cause) {
+        logWorkerTriggerFailure(cause);
+      }
+    });
     return Response.json({ runId: run.id, status: run.status }, { status: 202 });
   } catch (cause) {
     return apiErrorResponse(cause);

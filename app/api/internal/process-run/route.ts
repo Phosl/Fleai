@@ -1,6 +1,8 @@
 import { processAnalysisRun, RunProcessingError } from "@/lib/ai/process-run";
 import { serverEnv } from "@/lib/env/server";
 
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   const authorization = request.headers.get("authorization");
   if (!serverEnv.internalWorkerSecret || authorization !== `Bearer ${serverEnv.internalWorkerSecret}`) {

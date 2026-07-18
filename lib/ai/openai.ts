@@ -73,6 +73,7 @@ async function inspectItemWithModel(input: ItemInspectionInput, model: string, f
       "Descrivi soltanto elementi visibili. Non dichiarare mai autentici, rari o di valore certo oggetti firmati o importanti.",
       "Blocca armi, medicinali, sostanze, materiale illecito e oggetti dichiaratamente contraffatti.",
       "Se servono etichette, firme, seriali, misure o dettagli dei difetti, elencali tra unknowns e nextChecks.",
+      "photoCoverage e identificationSpecificity devono essere percentuali intere da 0 a 100, mai valori fra 0 e 1.",
       "L'output deve essere in italiano.",
     ].join(" "),
     input: [{

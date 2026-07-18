@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyProviderError, providerErrorCode } from "@/lib/ai/provider-errors";
+import { classifyProviderError, providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { adminDatabaseMessage, isMissingSchemaError, publicDatabaseMessage } from "@/lib/database-errors";
 
 describe("classificazione errori", () => {
@@ -12,6 +12,16 @@ describe("classificazione errori", () => {
   ] as const)("classifica provider senza esporre messaggi grezzi", (error, expected) => {
     expect(classifyProviderError(error)).toBe(expected);
     expect(providerErrorCode(error)).toMatch(/^PROVIDER_/);
+  });
+
+  it("classifica gli status provider e conserva solo metadati diagnostici sicuri", () => {
+    const cause = { status: 401, code: "invalid_api_key", request_id: "req_123", secret: "non-loggare" };
+    expect(classifyProviderError(cause)).toBe("configuration");
+    expect(providerErrorMetadata(cause)).toEqual({
+      providerStatus: 401,
+      providerCode: "invalid_api_key",
+      providerRequestId: "req_123",
+    });
   });
 
   it("distingue schema mancante e privilegi insufficienti", () => {

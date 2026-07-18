@@ -51,7 +51,7 @@ Le policy Storage vincolano il bucket privato al primo segmento `auth.uid()`; il
 
 ## Provider
 
-- OpenAI Responses: `OPENAI_FAST_MODEL=gpt-5.6-luna` gestisce riconoscimento e ricerca iniziali; sotto 50/100 di specificità, con meno di due fonti o meno di due comparabili EUR validi, la pipeline riprova con `OPENAI_ANALYSIS_MODEL=gpt-5.6-terra`. La sintesi resta sempre sul modello più capace e usa output Zod strict. Vedi la [guida ufficiale ai modelli GPT-5.6](https://developers.openai.com/api/docs/guides/latest-model).
+- OpenAI Responses: `OPENAI_FAST_MODEL=gpt-5.6-luna` gestisce riconoscimento e ricerca iniziali; se non identifica l'oggetto, non trova fonti o non conserva alcun comparabile EUR valido, la pipeline riprova con `OPENAI_ANALYSIS_MODEL=gpt-5.6-terra`. La sintesi resta sempre sul modello più capace e usa output Zod strict. Vedi la [guida ufficiale ai modelli GPT-5.6](https://developers.openai.com/api/docs/guides/latest-model).
 - GPT Image: `OPENAI_IMAGE_MODEL=gpt-image-2-2026-04-21`; gli edit usano alta fedeltà e ricevono il watermark lato server.
 - Creatomate: il template verticale deve esporre gli elementi dinamici `Title`, `Price`, `Image-1`, `Image-2`, `Image-3`. Il callback è verificato con metadata HMAC e stato recuperato server-side tramite API v2.
 - Turnstile e Resend proteggono/notificano il modulo anonimo. Una mail fallita non elimina la richiesta.

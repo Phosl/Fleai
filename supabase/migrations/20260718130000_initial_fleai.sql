@@ -394,7 +394,13 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select * from pgmq.read('fleai_jobs', 300, greatest(1, least(batch_size, 10)))
+  select
+    job.msg_id,
+    job.read_ct,
+    job.enqueued_at,
+    job.vt,
+    job.message
+  from pgmq.read('fleai_jobs', 300, greatest(1, least(batch_size, 10))) as job
 $$;
 
 create function public.delete_ai_job(message_id bigint)

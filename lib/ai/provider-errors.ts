@@ -20,7 +20,7 @@ export function classifyProviderError(cause: unknown): ProviderErrorClass {
   if (message.includes("rate") || message.includes("429")) return "rate_limit";
   if (message.includes("timeout") || message.includes("timed out")) return "timeout";
   if (message.includes("blocked") || message.includes("prohibited") || message.includes("moderation")) return "content";
-  if (message.includes("invalid") || message.includes("empty")) return "invalid_output";
+  if (message.includes("invalid") || message.includes("empty") || message.includes("zod field") || message.includes("structured output")) return "invalid_output";
   return "unknown";
 }
 

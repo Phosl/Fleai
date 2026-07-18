@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { comparableSchema, identificationSchema, listingDraftSchema } from "@/lib/contracts";
 
+const generatedComparableSchema = comparableSchema.omit({ id: true });
+
 export const inspectionResultSchema = z.object({
   identification: identificationSchema,
   marketplacePolicy: z.object({
@@ -16,7 +18,7 @@ export const inspectionResultSchema = z.object({
 });
 
 export const marketSynthesisSchema = z.object({
-  comparables: z.array(comparableSchema).max(12),
+  comparables: z.array(generatedComparableSchema).max(12),
   resaleLow: z.number().nonnegative(),
   resaleLikely: z.number().nonnegative(),
   resaleHigh: z.number().nonnegative(),

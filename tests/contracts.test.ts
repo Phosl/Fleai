@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { zodTextFormat } from "openai/helpers/zod";
 import { createAiRunSchema, huntingReportSchema, inquirySchema, listingDraftSchema } from "@/lib/contracts";
 import { demoListing, demoReport } from "@/lib/demo-data";
+import { inspectionResultSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 
 describe("contratti strutturati", () => {
   it("valida report e bozza completi", () => {
@@ -14,5 +16,10 @@ describe("contratti strutturati", () => {
 
   it("richiede consenso e token nel modulo pubblico", () => {
     expect(inquirySchema.safeParse({ listingId: crypto.randomUUID(), name: "Ada", email: "ada@example.com", message: "È disponibile?", consent: false, turnstileToken: "" }).success).toBe(false);
+  });
+
+  it("converte gli schemi generati nel formato Structured Outputs di OpenAI", () => {
+    expect(() => zodTextFormat(inspectionResultSchema, "fleai_item_inspection")).not.toThrow();
+    expect(() => zodTextFormat(marketSynthesisSchema, "fleai_market_synthesis")).not.toThrow();
   });
 });

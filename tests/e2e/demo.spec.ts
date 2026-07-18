@@ -7,11 +7,21 @@ test("login con tab Accedi e Registrati", async ({ page }) => {
   const signUpTab = page.getByRole("tab", { name: "Registrati" });
   await expect(signInTab).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "Entra in Fleai." })).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("autocomplete", "current-password");
+  await expect(page.getByRole("button", { name: "Accedi", exact: true })).toBeVisible();
 
   await signUpTab.click();
   await expect(signUpTab).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "Crea il tuo spazio." })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Crea account con email/i })).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("minlength", "8");
+  await expect(page.getByLabel("Conferma password", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Crea il tuo account/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Registrati senza password/i })).toBeVisible();
+  await page.getByLabel("Email").fill("test-login@fleai.example");
+  await page.getByLabel("Password", { exact: true }).fill("password-sicura");
+  await page.getByLabel("Conferma password", { exact: true }).fill("password-diversa");
+  await page.getByRole("button", { name: /Crea il tuo account/i }).click();
+  await expect(page.locator(".auth-feedback[role='alert']")).toHaveText("Le password non coincidono.");
 
   await signUpTab.press("ArrowLeft");
   await expect(signInTab).toBeFocused();

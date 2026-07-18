@@ -53,7 +53,7 @@ export const comparableSchema = z.object({
   priceType: z.enum(["asking", "sold", "unknown"]),
   condition: z.string().max(120).nullable(),
   observedAt: z.string(),
-  similarity: z.number().min(0).max(100),
+  similarity: z.number().int().min(0).max(100),
 });
 
 export const identificationSchema = z.object({

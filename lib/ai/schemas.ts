@@ -24,7 +24,7 @@ export const marketSynthesisSchema = z.object({
   resaleLow: z.number().nonnegative(),
   resaleLikely: z.number().nonnegative(),
   resaleHigh: z.number().nonnegative(),
-  marketConsistency: z.number().min(0).max(100),
+  marketConsistency: z.number().int().min(0).max(100),
   risks: z.array(z.string().max(240)).max(12),
 });
 

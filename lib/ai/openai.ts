@@ -224,6 +224,7 @@ export async function synthesizeHuntingReport(input: {
     instructions: [
       "Sintetizza il mercato in EUR con prudenza.",
       "Ogni comparabile deve usare esattamente uno degli URL citati forniti; non inventare URL.",
+      "La similarity di ogni comparabile e marketConsistency devono essere percentuali intere da 0 a 100, mai valori fra 0 e 1.",
       "La fascia bassa deve riflettere il realizzo conservativo nelle condizioni osservate, non il miglior annuncio.",
       "Non calcolare convenienza, ROI o affidabilità: saranno calcolati dall'applicazione.",
     ].join(" "),

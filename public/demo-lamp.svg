@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#ffb9a8"/>
+  <circle cx="450" cy="470" r="320" fill="#f9f2e7" stroke="#17352f" stroke-width="18"/>
+  <path d="M278 458c42-136 129-214 258-240 65 84 96 179 93 285-76 39-163 55-260 48z" fill="#ff6b4a" stroke="#17352f" stroke-width="18"/>
+  <path d="M449 790v130m-136 0h272" stroke="#17352f" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="450" cy="470" r="47" fill="#d7ff5f" stroke="#17352f" stroke-width="16"/>
+  <path d="M75 155h170M145 85v170" stroke="#17352f" stroke-width="18" stroke-linecap="round"/>
+  <text x="55" y="1040" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#17352f">FOTO REALE · DEMO</text>
+</svg>

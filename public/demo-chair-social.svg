@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600">
+  <rect width="900" height="1600" fill="#17352f"/>
+  <circle cx="755" cy="220" r="280" fill="#ff6b4a"/>
+  <text x="70" y="145" font-family="Arial,sans-serif" font-size="48" font-weight="900" fill="#d7ff5f">OFFICINA RITROVATA</text>
+  <text x="65" y="360" font-family="Arial,sans-serif" font-size="104" font-weight="900" fill="#fffdf8">LINEE</text>
+  <text x="65" y="460" font-family="Arial,sans-serif" font-size="104" font-weight="900" fill="#fffdf8">CHE</text>
+  <text x="65" y="560" font-family="Arial,sans-serif" font-size="104" font-weight="900" fill="#d7ff5f">RESTANO.</text>
+  <path d="M165 1285C225 1180 285 1070 325 925M325 925h355M680 925c-9 183-2 319 22 410M250 1290h478" fill="none" stroke="#fffdf8" stroke-width="31" stroke-linecap="round"/>
+  <path d="M302 905 345 648h294l41 257z" fill="#f4e4bc" stroke="#fffdf8" stroke-width="17"/>
+  <path d="m266 1020 406-3 8 133-462 4z" fill="#f4e4bc" stroke="#fffdf8" stroke-width="17"/>
+  <text x="70" y="1500" font-family="Arial,sans-serif" font-size="68" font-weight="900" fill="#ff6b4a">€145 · DISPONIBILE</text>
+  <rect x="510" y="60" width="340" height="82" rx="41" fill="#fffdf8"/>
+  <text x="680" y="112" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="700" fill="#17352f">VISUALIZZAZIONE AI</text>
+</svg>

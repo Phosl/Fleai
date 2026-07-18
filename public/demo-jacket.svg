@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#e7ddff"/>
+  <path d="M320 185 160 310l98 224 77-46-26 397h282l-27-397 79 46 97-224-160-125-73 60-84-1z" fill="#c59036" stroke="#17352f" stroke-width="18" stroke-linejoin="round"/>
+  <path d="m320 185 46 119 84-60 84 60 46-119M450 244v641M332 487h100v115H320zm136 0h100l12 115H468z" fill="none" stroke="#17352f" stroke-width="15"/>
+  <circle cx="471" cy="354" r="10" fill="#17352f"/><circle cx="471" cy="419" r="10" fill="#17352f"/><circle cx="471" cy="675" r="10" fill="#17352f"/>
+  <rect x="520" y="46" width="320" height="94" rx="47" fill="#17352f"/>
+  <text x="680" y="106" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" font-weight="700" fill="#d7ff5f">VISUALIZZAZIONE AI</text>
+</svg>

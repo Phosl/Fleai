@@ -1,0 +1,25 @@
+import "server-only";
+
+import { publicEnv } from "@/lib/env/public";
+
+export const serverEnv = {
+  ...publicEnv,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  openAiApiKey: process.env.OPENAI_API_KEY,
+  openAiAnalysisModel: process.env.OPENAI_ANALYSIS_MODEL ?? "gpt-5.6-terra",
+  openAiImageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2-2026-04-21",
+  creatomateApiKey: process.env.CREATOMATE_API_KEY,
+  creatomateTemplateId: process.env.CREATOMATE_TEMPLATE_ID,
+  creatomateWebhookSecret: process.env.CREATOMATE_WEBHOOK_SECRET,
+  resendApiKey: process.env.RESEND_API_KEY,
+  emailFrom: process.env.EMAIL_FROM ?? "Fleai <noreply@example.com>",
+  turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY,
+  internalWorkerSecret: process.env.INTERNAL_WORKER_SECRET,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+};
+
+export const isDemoMode = !(
+  serverEnv.supabaseUrl &&
+  serverEnv.supabasePublishableKey &&
+  serverEnv.supabaseServiceRoleKey
+);

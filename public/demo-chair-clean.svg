@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <rect width="900" height="1100" fill="#fffdf8"/>
+  <ellipse cx="465" cy="900" rx="300" ry="65" fill="#d9d6cc"/>
+  <path d="M185 865C245 760 305 650 345 505M345 505h355M700 505c-9 183-2 319 22 410M270 870h478" fill="none" stroke="#17352f" stroke-width="34" stroke-linecap="round"/>
+  <path d="M322 485 365 228h294l41 257z" fill="#f4e4bc" stroke="#17352f" stroke-width="18"/>
+  <path d="m365 250 284 210m-278-105 176 130m91-232L359 463m169-213L350 380" stroke="#b67c45" stroke-width="10" opacity=".72"/>
+  <path d="m286 600 406-3 8 133-462 4z" fill="#f4e4bc" stroke="#17352f" stroke-width="18"/>
+  <path d="m274 614 398 106m-283-110 278 75m-150-77 174 46M267 703l350-94m-216 111 289-80m-134 78 138-39" stroke="#b67c45" stroke-width="9" opacity=".72"/>
+  <rect x="520" y="46" width="320" height="94" rx="47" fill="#17352f"/>
+  <text x="680" y="106" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" font-weight="700" fill="#d7ff5f">VISUALIZZAZIONE AI</text>
+</svg>

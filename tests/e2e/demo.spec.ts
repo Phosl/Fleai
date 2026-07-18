@@ -1,0 +1,52 @@
+import { expect, test } from "@playwright/test";
+
+test("Hunting demo: foto, ripristino e report", async ({ page }) => {
+  await page.goto("/app/hunt/new");
+  await expect(page.getByRole("heading", { name: /VALE LA PENA/i })).toBeVisible();
+  const photo = await page.screenshot({ type: "jpeg", quality: 80 });
+  await page.getByLabel("Aggiungi foto 1").setInputFiles({ name: "oggetto.jpg", mimeType: "image/jpeg", buffer: photo });
+  await expect(page.getByText("(1/3)")).toBeVisible();
+  await page.getByRole("button", { name: /Cerca e valuta/i }).click();
+  await expect(page).toHaveURL(/demo-report/);
+  await expect(page.getByText(/Buon acquisto per rivendita/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /eBay Italia/i })).toHaveAttribute("target", "_blank");
+});
+
+test("Shop demo: approvazione e pubblicazione", async ({ page }) => {
+  await page.goto("/app/items/new");
+  await page.getByLabel(/Confermo che descrizione/i).check();
+  await page.getByRole("button", { name: /Pubblica nello shop Fleai/i }).click();
+  await expect(page).toHaveURL(/\/s\/officina-ritrovata\/sedia-cesca-vintage/);
+  await expect(page.getByRole("heading", { name: /Sedia cantilever vintage/i })).toBeVisible();
+});
+
+test("prenotazione anonima demo", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/s/officina-ritrovata/sedia-cesca-vintage");
+  await page.getByLabel("Nome").fill("Ada Rossi");
+  await page.getByLabel("Email").fill("ada@example.com");
+  await page.getByLabel("Messaggio").fill("Ciao, l’oggetto è ancora disponibile?");
+  await page.getByLabel(/Acconsento/).check();
+  const validity = await page.locator("form.inquiry-form").evaluate((form) => ({
+    valid: (form as HTMLFormElement).checkValidity(),
+    invalid: [...form.querySelectorAll(":invalid")].map((element) => (element as HTMLInputElement).name),
+  }));
+  expect(validity).toEqual({ valid: true, invalid: [] });
+  const submit = page.getByRole("button", { name: /Invia richiesta/i });
+  await expect(submit).toBeEnabled();
+  await submit.click();
+  await page.waitForTimeout(1_000);
+  expect(pageErrors).toEqual([]);
+  await expect(page.getByRole("heading", { name: "Richiesta inviata" })).toBeVisible({ timeout: 10_000 });
+});
+
+test("layout senza overflow a 360, 768 e 1440 px", async ({ page }) => {
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 800 : 1000 });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /OGGETTI TROVATI/i })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `overflow orizzontale a ${width}px`).toBeLessThanOrEqual(1);
+  }
+});

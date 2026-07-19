@@ -115,7 +115,7 @@ export async function setAdminUserSuspension(input: {
   const admin = createAdminClient();
   const [{ data: authData, error: authReadError }, { data: profile, error: profileError }] = await Promise.all([
     admin.auth.admin.getUserById(input.targetId),
-    admin.from("profiles").select("suspended_at,suspension_reason").eq("id", input.targetId).maybeSingle(),
+    admin.from("profiles").select("suspended_at,suspension_reason,is_super_admin").eq("id", input.targetId).maybeSingle(),
   ]);
   if (authReadError) throw authReadError;
   if (profileError) throw profileError;
@@ -124,7 +124,7 @@ export async function setAdminUserSuspension(input: {
     const targetError = assertAdminTargetCanBeSuspended({
       actorId: input.actorId,
       targetId: input.targetId,
-      targetIsAdmin: authData.user.app_metadata?.role === "admin",
+      targetIsAdmin: profile.is_super_admin,
     });
     if (targetError) throw new ApiError(409, "ADMIN_SUSPENSION_FORBIDDEN", targetError);
   }

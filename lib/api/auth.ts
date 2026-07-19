@@ -1,8 +1,15 @@
 import "server-only";
 
-import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isMissingSchemaError } from "@/lib/database-errors";
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+type AccessProfile = {
+  display_name: string;
+  suspended_at: string | null;
+  is_super_admin: boolean;
+};
 
 export class ApiError extends Error {
   constructor(
@@ -14,32 +21,67 @@ export class ApiError extends Error {
   }
 }
 
+export async function readUserAccessProfile(supabase: ServerSupabaseClient, userId: string): Promise<{
+  profile: AccessProfile | null;
+  adminSchemaMissing: boolean;
+  isSuspended: boolean;
+}> {
+  const [current, suspension] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name,suspended_at,is_super_admin")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase.rpc("is_suspended", {}),
+  ]);
+  if (suspension.error && !isMissingSchemaError(suspension.error)) throw suspension.error;
+
+  if (!current.error) {
+    return {
+      profile: current.data,
+      adminSchemaMissing: false,
+      isSuspended: suspension.error ? Boolean(current.data?.suspended_at) : Boolean(suspension.data),
+    };
+  }
+  if (!isMissingSchemaError(current.error)) throw current.error;
+
+  console.warn(JSON.stringify({
+    scope: "auth",
+    operation: "access_profile",
+    resource: "profiles.is_super_admin",
+    code: current.error.code,
+  }));
+
+  const fallback = await supabase
+    .from("profiles")
+    .select("display_name,suspended_at")
+    .eq("id", userId)
+    .maybeSingle();
+  if (fallback.error && !isMissingSchemaError(fallback.error)) throw fallback.error;
+  return {
+    profile: fallback.data ? { ...fallback.data, is_super_admin: false } : null,
+    adminSchemaMissing: true,
+    isSuspended: suspension.error ? Boolean(fallback.data?.suspended_at) : Boolean(suspension.data),
+  };
+}
+
 export async function requireUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) throw new ApiError(401, "UNAUTHORIZED", "Accedi per continuare.");
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("suspended_at")
-    .eq("id", data.user.id)
-    .maybeSingle();
-  if (profileError && !isMissingSchemaError(profileError)) throw profileError;
-  if (profileError && isMissingSchemaError(profileError)) {
-    console.warn(JSON.stringify({ scope: "auth", operation: "suspension_check", resource: "profiles", code: profileError.code }));
-  }
-  if (profile?.suspended_at) {
+  const access = await readUserAccessProfile(supabase, data.user.id);
+  if (access.isSuspended) {
     throw new ApiError(403, "ACCOUNT_SUSPENDED", "Il tuo account è sospeso. Contatta l'assistenza Fleai.");
   }
-  return { supabase, user: data.user };
-}
-
-export function isAdmin(user: User) {
-  return user.app_metadata?.role === "admin";
+  return { supabase, user: data.user, ...access };
 }
 
 export async function requireAdmin() {
   const context = await requireUser();
-  if (!isAdmin(context.user)) {
+  if (context.adminSchemaMissing) {
+    throw new ApiError(503, "ADMIN_SCHEMA_REQUIRED", "Applica la migrazione Super Admin più recente e ricarica la pagina.");
+  }
+  if (!context.profile?.is_super_admin) {
     throw new ApiError(403, "ADMIN_REQUIRED", "Non hai accesso al pannello Super Admin.");
   }
   return context;

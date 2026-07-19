@@ -1,12 +1,17 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(34);
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
   ('10000000-0000-4000-8000-000000000001', 'owner@fleai.test', '{"provider":"email","providers":["email"]}', '{"full_name":"Owner"}'),
   ('20000000-0000-4000-8000-000000000002', 'other@fleai.test', '{"provider":"email","providers":["email"]}', '{"full_name":"Other"}'),
-  ('30000000-0000-4000-8000-000000000003', 'admin@fleai.test', '{"role":"admin","provider":"email","providers":["email"]}', '{"full_name":"Admin"}');
+  ('30000000-0000-4000-8000-000000000003', 'admin@fleai.test', '{"provider":"email","providers":["email"]}', '{"full_name":"Admin"}');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+update public.profiles set is_super_admin = true where id = '30000000-0000-4000-8000-000000000003';
+select is((select is_super_admin from public.profiles where id = '30000000-0000-4000-8000-000000000003'), true, 'service role can assign Super Admin in profiles');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
@@ -35,7 +40,8 @@ select lives_ok($$
   insert into public.items (id, owner_id, slug, title, category, idempotency_key)
   values ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000002', 'oggetto-other', 'Oggetto other', 'collectibles', '61000000-0000-4000-8000-000000000006')
 $$, 'active user can create own private item');
-select throws_ok($$select * from public.admin_list_users()$$, '42501', null, 'non-admin cannot call admin users RPC');
+select set_config('request.jwt.claims', '{"sub":"20000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select throws_ok($$select * from public.admin_list_users()$$, '42501', null, 'JWT app_metadata cannot promote a non-admin profile');
 
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
@@ -55,8 +61,8 @@ select throws_ok($$
 $$, '42501', null, 'suspended user cannot upload private media');
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
-select is((select count(*)::integer from public.items where id = '40000000-0000-4000-8000-000000000004'), 1, 'admin claim can audit item');
+select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+select is((select count(*)::integer from public.items where id = '40000000-0000-4000-8000-000000000004'), 1, 'admin profile can audit item without a JWT role');
 select is((select title from public.items where id = '40000000-0000-4000-8000-000000000004'), 'Sedia test', 'IDOR update did not change item');
 select lives_ok($$
   update public.items set moderation_status = 'approved', status = 'published', shop_id = (select id from public.shops where owner_id = '10000000-0000-4000-8000-000000000001'), published_at = now()
@@ -82,7 +88,7 @@ $$, 'service role can write immutable admin audit');
 select throws_ok($$update public.admin_audit_logs set reason = 'Alterato'$$, '42501', null, 'service role cannot rewrite admin audit');
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"30000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
 select is((select count(*)::integer from public.admin_audit_logs), 1, 'admin can read audit trail');
 
 set local role anon;
@@ -98,6 +104,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select results_eq($$select buyer_email from public.inquiries$$, $$values ('buyer@fleai.test'::text)$$, 'seller can read buyer email');
 select throws_ok($$update public.profiles set hunting_limit_override = 999 where id = '10000000-0000-4000-8000-000000000001'$$, '42501', null, 'owner cannot change quota override');
+select throws_ok($$update public.profiles set is_super_admin = true where id = '10000000-0000-4000-8000-000000000001'$$, '42501', null, 'owner cannot promote itself to Super Admin');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"20000000-0000-4000-8000-000000000002","role":"authenticated"}', true);

@@ -5,8 +5,7 @@ import { Logo } from "@/components/logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
-import { isAdmin } from "@/lib/api/auth";
-import { isMissingSchemaError } from "@/lib/database-errors";
+import { readUserAccessProfile } from "@/lib/api/auth";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   let displayName = "Filippo";
@@ -15,11 +14,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/login?next=/app");
-    const { data: profile, error } = await supabase.from("profiles").select("display_name,suspended_at").eq("id", user.id).maybeSingle();
-    if (error && !isMissingSchemaError(error)) throw error;
-    if (profile?.suspended_at) redirect("/login?error=suspended");
+    const { profile, isSuspended } = await readUserAccessProfile(supabase, user.id);
+    if (isSuspended) redirect("/login?error=suspended");
     displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split("@")[0] || "Venditore";
-    showAdmin = isAdmin(user);
+    showAdmin = profile?.is_super_admin ?? false;
   }
 
   return (

@@ -20,6 +20,7 @@ export type Database = {
           bio: string | null;
           hunting_limit_override: number | null;
           shop_limit_override: number | null;
+          is_super_admin: boolean;
           suspended_at: string | null;
           suspension_reason: string | null;
         };
@@ -30,6 +31,7 @@ export type Database = {
           bio?: string | null;
           hunting_limit_override?: number | null;
           shop_limit_override?: number | null;
+          is_super_admin?: boolean;
           suspended_at?: string | null;
           suspension_reason?: string | null;
         };

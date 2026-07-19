@@ -5,8 +5,7 @@ import { AdminNav } from "@/components/admin/admin-nav";
 import { Logo } from "@/components/logo";
 import { Notice } from "@/components/notice";
 import { SignOutButton } from "@/components/sign-out-button";
-import { isAdmin } from "@/lib/api/auth";
-import { isMissingSchemaError } from "@/lib/database-errors";
+import { readUserAccessProfile } from "@/lib/api/auth";
 import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,10 +18,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/admin");
-  if (!isAdmin(user)) notFound();
-  const { data: profile, error } = await supabase.from("profiles").select("display_name,suspended_at").eq("id", user.id).maybeSingle();
-  if (error && !isMissingSchemaError(error)) throw error;
-  if (profile?.suspended_at) redirect("/login?error=suspended");
+  const { profile, adminSchemaMissing, isSuspended } = await readUserAccessProfile(supabase, user.id);
+  if (isSuspended) redirect("/login?error=suspended");
+  if (adminSchemaMissing) {
+    return <main className="admin-config-page"><Logo /><Notice tone="warning">Applica la migrazione <code>20260719160000_profile_super_admin.sql</code> e ricarica la pagina.</Notice></main>;
+  }
+  if (!profile?.is_super_admin) notFound();
   const displayName = profile?.display_name || user.email?.split("@")[0] || "Admin";
   return (
     <div className="dashboard-shell admin-shell">

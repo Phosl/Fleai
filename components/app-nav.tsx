@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Camera, Inbox, Package, Settings, Store } from "lucide-react";
+import { BarChart3, Camera, Inbox, Package, Settings, ShieldCheck, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -17,7 +17,7 @@ function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname.startsWith(href.replace(/\/new$/, ""));
 }
 
-export function AppNav() {
+export function AppNav({ showAdmin = false }: { showAdmin?: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="app-nav" aria-label="Dashboard">
@@ -29,6 +29,7 @@ export function AppNav() {
       <Link href="/app/settings" className={cn("app-nav-link", pathname.startsWith("/app/settings") && "app-nav-link-active")}>
         <Settings size={19} aria-hidden="true" /><span>Impostazioni</span>
       </Link>
+      {showAdmin && <Link href="/admin" className="app-nav-link"><ShieldCheck size={19} aria-hidden="true" /><span>Super Admin</span></Link>}
     </nav>
   );
 }

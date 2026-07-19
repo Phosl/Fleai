@@ -8,12 +8,14 @@ import { createClient } from "@/lib/supabase/server";
 export default async function MyShopPage() {
   if (isDemoMode) return <ShopContent items={demoItems.map((item) => ({ ...item }))} shopHref="/s/officina-ritrovata" />;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return <ShopContent items={[]} />;
   const [{ data: items }, { data: shop }] = await Promise.all([
-    supabase.from("items").select("id,slug,title,price_cents,category,status").order("created_at", { ascending: false }),
-    supabase.from("shops").select("slug,is_published").maybeSingle(),
+    supabase.from("items").select("id,slug,title,price_cents,category,status").eq("owner_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("shops").select("slug,is_published").eq("owner_id", user.id).maybeSingle(),
   ]);
   const ids = (items ?? []).map((item) => item.id);
-  const { data: assets } = ids.length ? await supabase.from("media_assets").select("item_id,bucket_id,storage_path,ai_generated,sort_order").in("item_id", ids).order("sort_order") : { data: [] };
+  const { data: assets } = ids.length ? await supabase.from("media_assets").select("item_id,bucket_id,storage_path,ai_generated,sort_order").eq("owner_id", user.id).in("item_id", ids).order("sort_order") : { data: [] };
   const cards = await Promise.all((items ?? []).map(async (item) => {
     const asset = assets?.find((candidate) => candidate.item_id === item.id && candidate.bucket_id === "listing-media-public") ?? assets?.find((candidate) => candidate.item_id === item.id && !candidate.ai_generated) ?? assets?.find((candidate) => candidate.item_id === item.id);
     let image = "/demo-chair.svg";

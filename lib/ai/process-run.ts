@@ -10,6 +10,7 @@ import { createSocialRender } from "@/lib/social/creatomate";
 import { formatCurrency } from "@/lib/format";
 import { providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { shouldRetryResearchAfterSynthesis } from "@/lib/ai/model-routing";
+import { isMissingSchemaError } from "@/lib/database-errors";
 
 export class RunProcessingError extends Error {
   constructor(
@@ -344,6 +345,21 @@ export async function processAnalysisRun(runId: string) {
   if (runError) throw runError;
   if (!run) throw new RunProcessingError("RUN_NOT_FOUND", true);
   if (run.status === "completed" || run.status === "failed") return run.result;
+  const { data: ownerProfile, error: profileError } = await admin
+    .from("profiles")
+    .select("suspended_at")
+    .eq("id", run.owner_id)
+    .maybeSingle();
+  if (profileError && !isMissingSchemaError(profileError)) throw profileError;
+  if (ownerProfile?.suspended_at) {
+    await admin.from("analysis_runs").update({
+      status: "failed",
+      progress: 100,
+      error_code: "ACCOUNT_SUSPENDED",
+      completed_at: new Date().toISOString(),
+    }).eq("id", run.id);
+    throw new RunProcessingError("ACCOUNT_SUSPENDED", true);
+  }
 
   const attempt = run.attempt_count + 1;
   await admin.from("analysis_runs").update({ attempt_count: attempt }).eq("id", run.id);

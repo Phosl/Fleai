@@ -17,10 +17,12 @@ export default async function NewShopItemPage({ searchParams }: { searchParams: 
   }
   if (!itemId) return <><div className="page-head"><div><span className="eyebrow">Flea Market Shop</span><h1 className="title">NUOVO OGGETTO.</h1><p>La prima analisi verifica identità, condizioni e rischi; poi riutilizziamo tutto per creare la scheda.</p></div></div><section className="panel" style={{ maxWidth: 700 }}><span className="quick-action-icon"><Camera size={22} /></span><h2>Parti da 1–3 foto reali</h2><p className="muted">Le foto delle condizioni restano sempre separate dai visual AI. Dopo il report potrai generare scheda Vinted, scena, try-on e social pack.</p><Link className="button button-coral" href="/app/hunt/new">Fotografa l’oggetto <ArrowRight size={17} /></Link></section></>;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) notFound();
   const [{ data: item }, { data: runs }, { data: assets }] = await Promise.all([
-    supabase.from("items").select("id,selected_report_id").eq("id", itemId).maybeSingle(),
-    supabase.from("analysis_runs").select("id,kind,status,result,error_code,created_at").eq("item_id", itemId).order("created_at", { ascending: false }).limit(12),
-    supabase.from("media_assets").select("id,bucket_id,storage_path,alt_text,ai_generated,kind").eq("item_id", itemId).eq("bucket_id", "item-media-private").order("sort_order"),
+    supabase.from("items").select("id,selected_report_id").eq("id", itemId).eq("owner_id", user.id).maybeSingle(),
+    supabase.from("analysis_runs").select("id,kind,status,result,error_code,created_at").eq("item_id", itemId).eq("owner_id", user.id).order("created_at", { ascending: false }).limit(12),
+    supabase.from("media_assets").select("id,bucket_id,storage_path,alt_text,ai_generated,kind").eq("item_id", itemId).eq("owner_id", user.id).eq("bucket_id", "item-media-private").order("sort_order"),
   ]);
   if (!item) notFound();
   const activeRun = runs?.find((run) => activeRunStatuses.has(run.status));

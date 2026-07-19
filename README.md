@@ -31,7 +31,7 @@ npm run supabase:reset
 
 ## Configurazione Supabase
 
-1. Applica `supabase/migrations/20260718130000_initial_fleai.sql` prima del deploy Next.js.
+1. Applica in ordine `supabase/migrations/20260718130000_initial_fleai.sql` e `supabase/migrations/20260719120000_super_admin.sql` prima del deploy Next.js.
 2. Configura Auth email OTP e Google; aggiungi `/auth/callback` agli URL consentiti.
 3. Imposta i secret della Edge Function: `APP_URL` e `INTERNAL_WORKER_SECRET` oltre ai secret Supabase automatici.
 4. Salva in Vault l’URL completo della Function e la publishable key usati dal Cron:
@@ -48,6 +48,12 @@ npx supabase functions deploy process-ai-jobs
 ```
 
 Le policy Storage vincolano il bucket privato al primo segmento `auth.uid()`; il bucket pubblico riceve soltanto copie approvate dal route handler server. Riferimenti: [Storage RLS](https://supabase.com/docs/guides/storage/security/access-control), [PGMQ](https://supabase.com/docs/guides/queues/pgmq), [Cron + Edge Functions](https://supabase.com/docs/guides/functions/schedule-functions).
+
+## Super Admin
+
+Il backoffice globale vive in `/admin` ed è separato dal workspace personale `/app`. Dopo aver applicato la migrazione Super Admin, assegna il ruolo soltanto dal server o dal pannello Supabase impostando `app_metadata.role = "admin"` sull'utente autorizzato. L'utente deve poi uscire e accedere di nuovo per aggiornare la sessione.
+
+Il ruolo non è modificabile dal client. Sospensioni, quote, moderazione, transizioni commerciali e modifiche amministrative sono validate lato server e registrate in `admin_audit_logs`.
 
 ## Provider
 

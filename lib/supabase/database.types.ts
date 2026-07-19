@@ -20,6 +20,8 @@ export type Database = {
           bio: string | null;
           hunting_limit_override: number | null;
           shop_limit_override: number | null;
+          suspended_at: string | null;
+          suspension_reason: string | null;
         };
         Insert: MutableTimestamps & {
           id: string;
@@ -28,6 +30,8 @@ export type Database = {
           bio?: string | null;
           hunting_limit_override?: number | null;
           shop_limit_override?: number | null;
+          suspended_at?: string | null;
+          suspension_reason?: string | null;
         };
         Update: MutableTimestamps & Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -318,11 +322,89 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      admin_audit_logs: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          action: string;
+          target_type: "user" | "item";
+          target_id: string;
+          reason: string;
+          before_data: Json;
+          after_data: Json;
+          idempotency_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          action: string;
+          target_type: "user" | "item";
+          target_id: string;
+          reason: string;
+          before_data?: Json;
+          after_data?: Json;
+          idempotency_key: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_audit_logs"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       accept_inquiry: { Args: { inquiry_id: string }; Returns: undefined };
       enqueue_ai_run: { Args: { run_id: string }; Returns: number };
+      is_suspended: { Args: { check_user_id?: string }; Returns: boolean };
+      admin_list_users: {
+        Args: { p_query?: string; p_status?: string; p_sort?: string; p_limit?: number; p_offset?: number };
+        Returns: Array<{
+          user_id: string;
+          email: string;
+          display_name: string;
+          created_at: string;
+          last_sign_in_at: string | null;
+          providers: string[];
+          suspended_at: string | null;
+          suspension_reason: string | null;
+          hunting_limit_override: number | null;
+          shop_limit_override: number | null;
+          item_count: number;
+          hunting_used: number;
+          shop_used: number;
+          total_count: number;
+        }>;
+      };
+      admin_list_items: {
+        Args: {
+          p_query?: string;
+          p_owner_id?: string;
+          p_status?: string;
+          p_moderation?: string;
+          p_category?: string;
+          p_sort?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: Array<{
+          item_id: string;
+          owner_id: string;
+          owner_email: string;
+          owner_name: string;
+          title: string;
+          brand: string | null;
+          category: Database["public"]["Enums"]["item_category"];
+          status: Database["public"]["Enums"]["item_status"];
+          moderation_status: Database["public"]["Enums"]["moderation_status"];
+          price_cents: number | null;
+          currency: string;
+          created_at: string;
+          published_at: string | null;
+          media_count: number;
+          run_count: number;
+          total_count: number;
+        }>;
+      };
     };
     Enums: {
       item_category: "fashion" | "home_design" | "collectibles";

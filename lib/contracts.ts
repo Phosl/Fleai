@@ -14,6 +14,8 @@ export const itemStatusSchema = z.enum([
   "archived",
 ]);
 
+export const moderationStatusSchema = z.enum(["pending", "approved", "blocked"]);
+
 export const aiRunKindSchema = z.enum([
   "hunting_report",
   "listing_draft",
@@ -166,8 +168,48 @@ export const inquirySchema = z.object({
   consent: z.literal(true),
 });
 
+const adminReasonSchema = z.string().trim().min(3).max(500);
+
+export const adminUserUpdateSchema = z.object({
+  displayName: z.string().trim().min(1).max(100),
+  bio: z.string().trim().max(1000).nullable(),
+  huntingLimitOverride: z.number().int().min(0).max(10_000).nullable(),
+  shopLimitOverride: z.number().int().min(0).max(10_000).nullable(),
+  reason: adminReasonSchema,
+});
+
+export const adminUserSuspensionSchema = z.object({
+  suspended: z.boolean(),
+  reason: adminReasonSchema,
+});
+
+export const adminItemUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(3000),
+  category: itemCategorySchema,
+  brand: z.string().trim().max(120).nullable(),
+  condition: z.string().trim().max(240).nullable(),
+  defects: z.array(z.string().trim().min(1).max(240)).max(12),
+  price: z.number().nonnegative().max(1_000_000).nullable(),
+  askingPrice: z.number().nonnegative().max(1_000_000).nullable(),
+  extraCosts: z.number().nonnegative().max(1_000_000),
+  reason: adminReasonSchema,
+});
+
+export const adminItemModerationSchema = z.object({
+  decision: moderationStatusSchema,
+  reason: adminReasonSchema,
+});
+
+export const adminItemTransitionSchema = z.object({
+  status: itemStatusSchema,
+  approvedMediaIds: z.array(z.string().uuid()).max(12).default([]),
+  reason: adminReasonSchema,
+});
+
 export type ItemCategory = z.infer<typeof itemCategorySchema>;
 export type ItemStatus = z.infer<typeof itemStatusSchema>;
+export type ModerationStatus = z.infer<typeof moderationStatusSchema>;
 export type AiRunKind = z.infer<typeof aiRunKindSchema>;
 export type AiRunStatus = z.infer<typeof aiRunStatusSchema>;
 export type MediaAssetKind = z.infer<typeof mediaAssetKindSchema>;
@@ -175,6 +217,8 @@ export type ComparableDTO = z.infer<typeof comparableSchema>;
 export type HuntingReportDTO = z.infer<typeof huntingReportSchema>;
 export type ListingDraftDTO = z.infer<typeof listingDraftSchema>;
 export type CreateAiRunInput = z.infer<typeof createAiRunSchema>;
+export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
+export type AdminItemUpdateInput = z.infer<typeof adminItemUpdateSchema>;
 
 export const AI_GENERATED_LABEL = "Visualizzazione AI";
 export const HUNTING_MONTHLY_LIMIT = 5;

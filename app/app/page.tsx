@@ -23,17 +23,19 @@ const demoData: DashboardData = {
 async function getDashboardData(): Promise<DashboardData> {
   if (isDemoMode) return demoData;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return demoData;
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const [{ data: allItems }, { data: usage }, { data: profile }, { data: inquiries }] = await Promise.all([
-    supabase.from("items").select("id,slug,title,price_cents,category,status,selected_report_id").order("created_at", { ascending: false }),
-    supabase.from("usage_events").select("operation,units").gte("occurred_at", monthStart),
-    supabase.from("profiles").select("hunting_limit_override,shop_limit_override").maybeSingle(),
-    supabase.from("inquiries").select("listing_id,message,status").in("status", ["new", "contacted"]).order("created_at", { ascending: false }),
+    supabase.from("items").select("id,slug,title,price_cents,category,status,selected_report_id").eq("owner_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("usage_events").select("operation,units").eq("owner_id", user.id).gte("occurred_at", monthStart),
+    supabase.from("profiles").select("hunting_limit_override,shop_limit_override").eq("id", user.id).maybeSingle(),
+    supabase.from("inquiries").select("listing_id,message,status").eq("seller_id", user.id).in("status", ["new", "contacted"]).order("created_at", { ascending: false }),
   ]);
   const recent = (allItems ?? []).slice(0, 3);
   const recentIds = recent.map((item) => item.id);
-  const { data: assets } = recentIds.length ? await supabase.from("media_assets").select("item_id,bucket_id,storage_path,ai_generated").in("item_id", recentIds).order("sort_order") : { data: [] };
+  const { data: assets } = recentIds.length ? await supabase.from("media_assets").select("item_id,bucket_id,storage_path,ai_generated").eq("owner_id", user.id).in("item_id", recentIds).order("sort_order") : { data: [] };
   const items = await Promise.all(recent.map(async (item) => {
     const asset = assets?.find((candidate) => candidate.item_id === item.id && !candidate.ai_generated) ?? assets?.find((candidate) => candidate.item_id === item.id);
     let image = "/demo-chair.svg";

@@ -91,7 +91,7 @@ function passwordErrorMessage(mode: AuthMode, code?: string) {
     : "Non siamo riusciti a creare l’account. Controlla i dati e riprova.";
 }
 
-export function AuthForm() {
+export function AuthForm({ nextPath = "/app", initialError }: { nextPath?: string; initialError?: string }) {
   const router = useRouter();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -101,9 +101,9 @@ export function AuthForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
-  const [state, setState] = useState<"idle" | "sent" | "error">("idle");
+  const [state, setState] = useState<"idle" | "sent" | "error">(initialError ? "error" : "idle");
   const [pending, setPending] = useState<PendingAction | null>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialError ?? "");
   const content = authContent[mode];
 
   function selectMode(nextMode: AuthMode) {
@@ -124,7 +124,7 @@ export function AuthForm() {
   }
 
   function openWorkspace() {
-    router.replace("/app");
+    router.replace(nextPath);
     router.refresh();
   }
 
@@ -158,7 +158,7 @@ export function AuthForm() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=/app` },
+      options: { emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}` },
     });
     setPending(null);
     if (error) {
@@ -189,7 +189,7 @@ export function AuthForm() {
     const { error } = await createClient().auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=/app`,
+        emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         shouldCreateUser: mode === "sign-up",
       },
     });
@@ -212,7 +212,7 @@ export function AuthForm() {
     setMessage("");
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${publicEnv.appUrl}/auth/callback?next=/app` },
+      options: { redirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}` },
     });
     if (error) {
       setPending(null);

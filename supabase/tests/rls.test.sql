@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(35);
 
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data)
 values
@@ -8,10 +8,14 @@ values
   ('20000000-0000-4000-8000-000000000002', 'other@fleai.test', '{"provider":"email","providers":["email"]}', '{"full_name":"Other"}'),
   ('30000000-0000-4000-8000-000000000003', 'admin@fleai.test', '{"provider":"email","providers":["email"]}', '{"full_name":"Admin"}');
 
+select lives_ok(
+  $$update public.profiles set is_super_admin = true where id = '30000000-0000-4000-8000-000000000003'$$,
+  'database administrators can assign Super Admin from the dashboard'
+);
+
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
-update public.profiles set is_super_admin = true where id = '30000000-0000-4000-8000-000000000003';
-select is((select is_super_admin from public.profiles where id = '30000000-0000-4000-8000-000000000003'), true, 'service role can assign Super Admin in profiles');
+select is((select is_super_admin from public.profiles where id = '30000000-0000-4000-8000-000000000003'), true, 'Super Admin assignment persists for server operations');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);

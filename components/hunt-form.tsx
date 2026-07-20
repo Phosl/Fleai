@@ -11,19 +11,41 @@ import { startAiRun } from "@/lib/api/ai-runs-client";
 
 const DRAFT_KEY = "hunt-new";
 
+const HUNT_FORM_DEFAULTS = {
+  category: "home_design",
+  itemName: "",
+  brand: "",
+  searchHint: "",
+  askingPrice: "35",
+  extraCosts: "10",
+  notes: "",
+};
+
 export function HuntForm() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ category: "home_design", askingPrice: "35", extraCosts: "10", notes: "" });
+  const [form, setForm] = useState(HUNT_FORM_DEFAULTS);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const onPhotosChange = useCallback((nextFiles: File[]) => setFiles(nextFiles), []);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const stored = localStorage.getItem("fleai:hunt-form");
-      if (stored) { try { setForm(JSON.parse(stored)); } catch { localStorage.removeItem("fleai:hunt-form"); } }
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setForm({
+            ...HUNT_FORM_DEFAULTS,
+            ...parsed,
+            askingPrice: String(parsed.askingPrice ?? HUNT_FORM_DEFAULTS.askingPrice),
+            extraCosts: String(parsed.extraCosts ?? HUNT_FORM_DEFAULTS.extraCosts),
+          });
+        } catch {
+          localStorage.removeItem("fleai:hunt-form");
+        }
+      }
       setDraftHydrated(true);
     });
     return () => cancelAnimationFrame(frame);
@@ -33,6 +55,11 @@ export function HuntForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (files.length === 0) { setError("Aggiungi almeno una foto dell’oggetto."); return; }
+    const hasSearchHint = [form.itemName, form.brand, form.searchHint].some((value) => value.trim().length > 0);
+    if (!hasSearchHint) {
+      setError("Inserisci almeno una tra: nome/modello, marca o descrizione breve per aiutare la ricerca.");
+      return;
+    }
     setStatus("submitting"); setError("");
     try {
       if (!isSupabaseConfigured) {
@@ -45,7 +72,15 @@ export function HuntForm() {
 
       const itemResponse = await fetch("/api/items", {
         method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-        body: JSON.stringify({ category: form.category, askingPrice: Number(form.askingPrice), extraCosts: Number(form.extraCosts), notes: form.notes }),
+        body: JSON.stringify({
+          category: form.category,
+          itemName: form.itemName,
+          brand: form.brand,
+          searchHint: form.searchHint,
+          askingPrice: Number(form.askingPrice),
+          extraCosts: Number(form.extraCosts),
+          notes: form.notes,
+        }),
       });
       if (!itemResponse.ok) throw new Error("Non siamo riusciti a creare il ritrovamento.");
       const { itemId } = await itemResponse.json() as { itemId: string };
@@ -60,7 +95,18 @@ export function HuntForm() {
         const { error: uploadError } = await supabase.storage.from("item-media-private").uploadToSignedUrl(path, token, file, { contentType: file.type });
         if (uploadError) throw uploadError;
       }
-      const { runId } = await startAiRun({ itemId, kind: "hunting_report", runInput: { askingPrice: Number(form.askingPrice), extraCosts: Number(form.extraCosts), notes: form.notes } });
+      const { runId } = await startAiRun({
+        itemId,
+        kind: "hunting_report",
+        runInput: {
+          itemName: form.itemName,
+          brand: form.brand,
+          searchHint: form.searchHint,
+          askingPrice: Number(form.askingPrice),
+          extraCosts: Number(form.extraCosts),
+          notes: form.notes,
+        },
+      });
       await clearDraftPhotos(DRAFT_KEY);
       localStorage.removeItem("fleai:hunt-form");
       router.push(`/app/runs/${runId}`);
@@ -72,11 +118,14 @@ export function HuntForm() {
   return (
     <form className="form-layout" onSubmit={handleSubmit}>
       <section className="form-card">
-        <h2>Fotografa il ritrovamento</h2>
-        <p>Una foto basta per iniziare; tre angolazioni rendono il report molto più affidabile.</p>
+        <h2>Fotografa e identifica</h2>
+        <p>Fai 1–3 foto e lascia almeno un riferimento oggettivo (nome, marca o descrizione breve). Aiuta molto la ricerca.</p>
         <div className="field-grid">
           <PhotoCapture draftKey={DRAFT_KEY} onChange={onPhotosChange} />
           <div className="field"><label htmlFor="category">Categoria</label><select id="category" className="select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}><option value="fashion">Moda e accessori</option><option value="home_design">Casa e design</option><option value="collectibles">Collezionabili</option></select></div>
+          <div className="field"><label htmlFor="item-name">Nome o modello</label><input id="item-name" className="input" type="text" value={form.itemName} placeholder="Es. Giubbotto in pelle, tazza campione..." onChange={(e) => setForm({ ...form, itemName: e.target.value })} /></div>
+          <div className="field"><label htmlFor="brand">Marca</label><input id="brand" className="input" type="text" value={form.brand} placeholder="Es. Levi&apos;s, Polaroid..." onChange={(e) => setForm({ ...form, brand: e.target.value })} /></div>
+          <div className="field field-full"><label htmlFor="search-hint">Descrizione breve <span className="muted">(obbligatoria se manca nome/marca)</span></label><textarea id="search-hint" className="textarea" placeholder="Es. pelle marrone, cuciture gialle, etichetta interna..." value={form.searchHint} onChange={(e) => setForm({ ...form, searchHint: e.target.value })} maxLength={500} /></div>
           <div className="field"><label htmlFor="asking-price">Prezzo richiesto</label><div style={{ position: "relative" }}><span style={{ position: "absolute", left: 14, top: 13 }}>€</span><input id="asking-price" className="input" style={{ paddingLeft: 34 }} type="number" min="0" step="1" inputMode="decimal" value={form.askingPrice} onChange={(e) => setForm({ ...form, askingPrice: e.target.value })} required /></div></div>
           <div className="field"><label htmlFor="extra-costs">Costi extra stimati</label><div style={{ position: "relative" }}><span style={{ position: "absolute", left: 14, top: 13 }}>€</span><input id="extra-costs" className="input" style={{ paddingLeft: 34 }} type="number" min="0" step="1" inputMode="decimal" value={form.extraCosts} onChange={(e) => setForm({ ...form, extraCosts: e.target.value })} /></div><span className="field-hint">Pulizia, riparazione, trasporto</span></div>
           <div className="field field-full"><label htmlFor="notes">Cosa hai notato? <span className="muted">Facoltativo</span></label><textarea id="notes" className="textarea" placeholder="Marchio visibile, misure, difetti, informazioni del venditore…" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={1000} /></div>

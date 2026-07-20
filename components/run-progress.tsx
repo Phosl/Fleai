@@ -17,6 +17,19 @@ const labels: Record<AiRunStatus, string> = {
   failed: "Analisi non riuscita",
 };
 
+const details: Record<AiRunStatus, string> = {
+  queued: "Prepariamo il lavoro in background. Puoi chiudere la pagina.",
+  moderating: "Verifichiamo contenuti e policy con moderazione AI.",
+  inspecting: "Il modello rapido analizza le immagini e capisce il tipo di oggetto.",
+  researching: "Cerchiamo annunci comparabili recenti nel mercato Italia/UE e li citiamo.",
+  synthesizing: "Rifiniamo stima e affidabilità con regole prudenziali.",
+  generating: "Generiamo i dati utili per la scheda vendita e la mediazione.",
+  rendering: "Generiamo i contenuti multimediali di presentazione.",
+  needs_input: "Servono altre foto o informazioni per proseguire.",
+  completed: "Risultato pronto: verrai reindirizzato alla scheda.",
+  failed: "La ricerca non è riuscita. Controlla i dati e riprova.",
+};
+
 export function RunProgress({ runId, initialStatus = "queued" }: { runId: string; initialStatus?: AiRunStatus }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -51,6 +64,7 @@ export function RunProgress({ runId, initialStatus = "queued" }: { runId: string
       {status !== "failed" && status !== "needs_input" && <div className="spinner" style={{ width: 46, height: 46, margin: "0 auto 24px", borderWidth: 4 }} />}
       <span className="eyebrow">Ricerca in corso</span>
       <h1 className="subtitle" style={{ margin: "18px 0 10px" }}>{labels[status]}</h1>
+      <p className="muted">{details[status]}</p>
       <p className="muted">Puoi chiudere questa pagina: il lavoro continua e lo ritroverai nel dashboard.</p>
       <div className="progress-bar" style={{ marginTop: 24, height: 12 }}><span style={{ width: `${progress}%`, transition: "width .35s" }} /></div>
       <p className="mono muted" style={{ fontSize: 11 }}>{progress}% · run {runId.slice(0, 8)}</p>

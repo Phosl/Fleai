@@ -18,6 +18,28 @@ import { serverEnv } from "@/lib/env/server";
 const DISCLAIMER =
   "Stima indicativa basata sulle foto e su annunci web: non certifica autenticità, rarità, condizioni o prezzo di vendita. Verifica l’oggetto dal vivo e, per pezzi importanti, consulta un professionista.";
 
+type UserContextHints = {
+  itemName?: string;
+  brand?: string;
+  searchHint?: string;
+};
+
+function normalizeHint(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatContextHints(context?: UserContextHints) {
+  const itemName = normalizeHint(context?.itemName);
+  const brand = normalizeHint(context?.brand);
+  const searchHint = normalizeHint(context?.searchHint);
+  const details = [
+    itemName && `Nome/modello: ${itemName}`,
+    brand && `Marca: ${brand}`,
+    searchHint && `Descrizione breve: ${searchHint}`,
+  ].filter(Boolean);
+  return details.length ? details.join(" · ") : "Nessun contesto testuale fornito.";
+}
+
 function client() {
   if (!serverEnv.openAiApiKey) throw new Error("OPENAI_API_KEY_MISSING");
   return new OpenAI({ apiKey: serverEnv.openAiApiKey });
@@ -54,6 +76,7 @@ type ItemInspectionInput = {
   imageUrls: string[];
   notes: string;
   categoryHint: string;
+  contextHints: UserContextHints;
 };
 
 type ModelRouteMetadata = {
@@ -63,6 +86,7 @@ type ModelRouteMetadata = {
 };
 
 async function inspectItemWithModel(input: ItemInspectionInput, model: string, fallbackPass: boolean) {
+  const contextHints = formatContextHints(input.contextHints);
   const response = await client().responses.parse({
     model,
     store: false,
@@ -80,6 +104,7 @@ async function inspectItemWithModel(input: ItemInspectionInput, model: string, f
       role: "user",
       content: [
         { type: "input_text", text: `Categoria indicata: ${input.categoryHint}. Note utente: ${input.notes || "nessuna"}. Ispeziona le foto senza fare una stima economica.` },
+        { type: "input_text", text: `Contesto utente: ${contextHints}` },
         ...imageContent(input.imageUrls),
       ],
     }],
@@ -135,6 +160,7 @@ function extractCitedSources(response: Awaited<ReturnType<OpenAI["responses"]["c
 type ComparableResearchInput = {
   userId: string;
   inspection: InspectionResult;
+  contextHints: UserContextHints;
 };
 
 async function researchComparablesWithModel(
@@ -160,7 +186,9 @@ async function researchComparablesWithModel(
       "Non usare valute diverse da EUR per calcolare stime, ma puoi segnalarle nel testo.",
       "Cita inline tutte le pagine da cui ricavi un comparabile. Preferisci oggetti molto simili per marca, modello, epoca, materiale e condizione.",
     ].join(" "),
-    input: `Identificazione prudente: ${JSON.stringify(input.inspection.identification)}. Trova fino a 8 comparabili e riporta titolo, prezzo, valuta, tipo di prezzo, condizione, data osservazione e somiglianza motivata.`,
+    input: `Identificazione prudente: ${JSON.stringify(input.inspection.identification)}.`
+      + ` Contesto utente: ${formatContextHints(input.contextHints)}.`
+      + " Trova fino a 8 comparabili e riporta titolo, prezzo, valuta, tipo di prezzo, condizione, data osservazione e somiglianza motivata.",
   });
   return { narrative: response.output_text, sources: extractCitedSources(response), requestId: response.id };
 }

@@ -26,6 +26,33 @@ function runInput(value: Json): CreateAiRunInput["input"] {
   return value as CreateAiRunInput["input"];
 }
 
+function asJsonObject(value: Json): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function firstDefinedTrimmed(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() || fallback : fallback;
+}
+
+function runContext(input: { notes?: string; itemName?: string; brand?: string; searchHint?: string }, item: { attributes: Json }) {
+  const attributes = asJsonObject(item.attributes);
+  const itemName = firstDefinedTrimmed(input.itemName || firstDefinedTrimmed(attributes.itemName));
+  const brand = firstDefinedTrimmed(input.brand || firstDefinedTrimmed(attributes.brand));
+  const searchHint = firstDefinedTrimmed(input.searchHint || firstDefinedTrimmed(attributes.searchHint));
+  const notes = [
+    firstDefinedTrimmed(input.notes || firstDefinedTrimmed(attributes.notes)),
+    firstDefinedTrimmed(attributes.notes)?.trim(),
+  ]
+    .filter(Boolean)
+    .filter((entry, index, list) => index === 0 || entry !== list[0]);
+  return {
+    notes: notes.join(" ").trim(),
+    itemName,
+    brand,
+    searchHint,
+  };
+}
+
 async function setProgress(
   runId: string,
   status: "moderating" | "inspecting" | "researching" | "synthesizing" | "generating" | "rendering",
@@ -73,11 +100,8 @@ async function processHunting(run: {
   const admin = createAdminClient();
   const input = runInput(run.input);
   const imageUrls = await signedRealMedia(run.item_id);
-  const notes = input.notes ?? (
-    item.attributes && typeof item.attributes === "object" && !Array.isArray(item.attributes)
-      ? String(item.attributes.notes ?? "")
-      : ""
-  );
+  const context = runContext(input, item);
+  const notes = context.notes || "";
 
   await setProgress(run.id, "moderating", 10);
   const moderation = await moderateSubmission(imageUrls, notes);
@@ -90,7 +114,17 @@ async function processHunting(run: {
   }
 
   await setProgress(run.id, "inspecting", 30);
-  const inspection = await inspectItem({ userId: run.owner_id, imageUrls, notes, categoryHint: item.category });
+  const inspection = await inspectItem({
+    userId: run.owner_id,
+    imageUrls,
+    notes,
+    categoryHint: item.category,
+    contextHints: {
+      itemName: context.itemName,
+      brand: context.brand,
+      searchHint: context.searchHint,
+    },
+  });
   if (!inspection.result.marketplacePolicy.allowed) {
     await Promise.all([
       admin.from("items").update({ moderation_status: "blocked" }).eq("id", run.item_id),
@@ -100,7 +134,15 @@ async function processHunting(run: {
   }
 
   await setProgress(run.id, "researching", 55);
-  let research = await researchComparables({ userId: run.owner_id, inspection: inspection.result });
+  let research = await researchComparables({
+    userId: run.owner_id,
+    inspection: inspection.result,
+    contextHints: {
+      itemName: context.itemName,
+      brand: context.brand,
+      searchHint: context.searchHint,
+    },
+  });
   const synthesize = () => synthesizeHuntingReport({
       userId: run.owner_id,
       inspection: inspection.result,
@@ -119,7 +161,15 @@ async function processHunting(run: {
   ) {
     await setProgress(run.id, "researching", 82);
     research = await researchComparables(
-      { userId: run.owner_id, inspection: inspection.result },
+      {
+        userId: run.owner_id,
+        inspection: inspection.result,
+        contextHints: {
+          itemName: context.itemName,
+          brand: context.brand,
+          searchHint: context.searchHint,
+        },
+      },
       { forceFallback: true },
     );
     await setProgress(run.id, "synthesizing", 90);

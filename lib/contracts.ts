@@ -122,6 +122,9 @@ export const createAiRunSchema = z.object({
     .object({
       askingPrice: z.number().nonnegative().optional(),
       extraCosts: z.number().nonnegative().optional(),
+      itemName: z.string().trim().max(120).optional(),
+      brand: z.string().trim().max(120).optional(),
+      searchHint: z.string().trim().max(500).optional(),
       notes: z.string().max(1000).optional(),
       tryOn: z
         .object({
@@ -146,8 +149,20 @@ export const createItemSchema = z.object({
   category: itemCategorySchema,
   askingPrice: z.number().nonnegative().max(1_000_000),
   extraCosts: z.number().nonnegative().max(1_000_000).default(0),
+  itemName: z.string().trim().max(120).optional(),
+  brand: z.string().trim().max(120).optional(),
+  searchHint: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(1000).default(""),
-});
+})
+  .superRefine((value, context) => {
+    if (!(value.itemName?.trim() || value.brand?.trim() || value.searchHint?.trim())) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["searchHint"],
+        message: "Inserisci almeno una tra: nome, marca o descrizione breve.",
+      });
+    }
+  });
 
 export const publishItemSchema = z.object({
   title: z.string().trim().min(4).max(100),

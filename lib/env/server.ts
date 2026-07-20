@@ -13,7 +13,7 @@ export const serverEnv = {
   creatomateTemplateId: process.env.CREATOMATE_TEMPLATE_ID,
   creatomateWebhookSecret: process.env.CREATOMATE_WEBHOOK_SECRET,
   resendApiKey: process.env.RESEND_API_KEY,
-  emailFrom: process.env.EMAIL_FROM ?? "Fleai <noreply@example.com>",
+  emailFrom: process.env.EMAIL_FROM ?? "Fleai <info@voxels.it>",
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY,
   internalWorkerSecret: process.env.INTERNAL_WORKER_SECRET,
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",

@@ -7,6 +7,10 @@ export async function POST(request: Request) {
     const { supabase, user } = await requireUser();
     const input = createItemSchema.parse(await request.json());
     const idempotencyKey = z.string().uuid().parse(request.headers.get("idempotency-key"));
+    const itemName = input.itemName?.trim() || "";
+    const brand = input.brand?.trim() || null;
+    const searchHint = input.searchHint?.trim() || null;
+    const notes = input.notes?.trim() || "";
     const { data: existing } = await supabase.from("items").select("id").eq("owner_id", user.id).eq("idempotency_key", idempotencyKey).maybeSingle();
     if (existing) return Response.json({ itemId: existing.id });
     const { data, error } = await supabase
@@ -14,11 +18,17 @@ export async function POST(request: Request) {
       .insert({
         owner_id: user.id,
         slug: `ritrovamento-${crypto.randomUUID().slice(0, 8)}`,
-        title: "Nuovo ritrovamento",
+        title: itemName || "Nuovo ritrovamento",
         category: input.category,
+        brand,
         asking_price_cents: Math.round(input.askingPrice * 100),
         extra_costs_cents: Math.round(input.extraCosts * 100),
-        attributes: { notes: input.notes },
+        attributes: {
+          notes,
+          itemName,
+          brand,
+          searchHint,
+        },
         idempotency_key: idempotencyKey,
       })
       .select("id")

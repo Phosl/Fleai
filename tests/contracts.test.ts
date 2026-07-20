@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zodTextFormat } from "openai/helpers/zod";
-import { comparableSchema, createAiRunSchema, huntingReportSchema, inquirySchema, listingDraftSchema } from "@/lib/contracts";
+import { comparableSchema, createAiRunSchema, createItemSchema, huntingReportSchema, inquirySchema, listingDraftSchema } from "@/lib/contracts";
 import { demoListing, demoReport } from "@/lib/demo-data";
 import { inspectionResultSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 
@@ -16,6 +16,25 @@ describe("contratti strutturati", () => {
 
   it("richiede consenso e token nel modulo pubblico", () => {
     expect(inquirySchema.safeParse({ listingId: crypto.randomUUID(), name: "Ada", email: "ada@example.com", message: "È disponibile?", consent: false, turnstileToken: "" }).success).toBe(false);
+  });
+
+  it("richiede almeno uno tra nome, marca o descrizione nel creazione oggetto", () => {
+    expect(createItemSchema.safeParse({
+      category: "fashion",
+      askingPrice: 20,
+      extraCosts: 5,
+      itemName: "Giacca vintage",
+      notes: "",
+    }).success).toBe(true);
+    expect(createItemSchema.safeParse({
+      category: "fashion",
+      askingPrice: 20,
+      extraCosts: 5,
+      notes: "",
+      itemName: "",
+      brand: "",
+      searchHint: "",
+    }).success).toBe(false);
   });
 
   it("converte gli schemi generati nel formato Structured Outputs di OpenAI", () => {

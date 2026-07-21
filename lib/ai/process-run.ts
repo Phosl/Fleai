@@ -3,7 +3,7 @@ import "server-only";
 import { generateListingDraft, inspectItem, moderateSubmission, researchComparables, synthesizeHuntingReport } from "@/lib/ai/openai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CreateAiRunInput } from "@/lib/contracts";
-import { listingDraftSchema } from "@/lib/contracts";
+import { huntingReportSchema, listingDraftSchema } from "@/lib/contracts";
 import type { Json } from "@/lib/supabase/database.types";
 import { generateMarketingImages } from "@/lib/ai/images";
 import { createSocialRender } from "@/lib/social/creatomate";
@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/format";
 import { providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { shouldRetryResearchAfterSynthesis } from "@/lib/ai/model-routing";
 import { isMissingSchemaError } from "@/lib/database-errors";
+import { slugify } from "@/lib/slug";
 
 export class RunProcessingError extends Error {
   constructor(
@@ -255,16 +256,25 @@ async function processListing(run: { id: string; owner_id: string; item_id: stri
     throw new RunProcessingError("HUNTING_REPORT_REQUIRED", true);
   }
   await setProgress(run.id, "generating", 45);
+  const report = huntingReportSchema.parse(reportRow.report);
   const generated = await generateListingDraft({
     userId: run.owner_id,
-    report: reportRow.report as never,
+    report,
   });
   const draft = generated.draft;
   const completedAt = new Date().toISOString();
+  console.info(JSON.stringify({
+    scope: "analysis_run",
+    event: "listing_generated",
+    runId: run.id,
+    model: generated.model,
+    usedFallback: generated.usedFallback,
+    deterministicFallback: generated.deterministicFallback,
+  }));
   const [{ error: itemError }, { error: runError }, { error: usageError }] = await Promise.all([
     admin.from("items").update({
       title: draft.title,
-      slug: `${draft.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 55)}-${run.item_id.slice(0, 6)}`,
+      slug: `${slugify(draft.title).slice(0, 55) || "oggetto"}-${run.item_id.slice(0, 6)}`,
       description: draft.description,
       category: draft.category,
       brand: draft.brand,
@@ -274,7 +284,15 @@ async function processListing(run: { id: string; owner_id: string; item_id: stri
       attributes: draft.attributes,
     }).eq("id", run.item_id),
     admin.from("analysis_runs").update({ status: "completed", progress: 100, result: draft as unknown as Json, provider_request_id: generated.requestId, completed_at: completedAt, error_code: null }).eq("id", run.id),
-    admin.from("usage_events").upsert({ owner_id: run.owner_id, run_id: run.id, operation: "shop_pack", units: 1, provider: "openai", provider_request_id: generated.requestId, occurred_at: completedAt }, { onConflict: "run_id,operation" }),
+    admin.from("usage_events").upsert({
+      owner_id: run.owner_id,
+      run_id: run.id,
+      operation: "shop_pack",
+      units: 1,
+      provider: generated.deterministicFallback ? "application" : "openai",
+      provider_request_id: generated.requestId,
+      occurred_at: completedAt,
+    }, { onConflict: "run_id,operation" }),
   ]);
   if (itemError) throw itemError;
   if (runError) throw runError;

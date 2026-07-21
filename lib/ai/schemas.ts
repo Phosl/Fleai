@@ -28,7 +28,19 @@ export const marketSynthesisSchema = z.object({
   risks: z.array(z.string().max(240)).max(12),
 });
 
-export const listingGenerationSchema = listingDraftSchema;
+// Category, brand, price and the Vinted copy are derived from the validated
+// Hunting report. Keeping the provider schema focused makes the fast path
+// quicker and reduces incomplete structured outputs.
+export const listingGenerationSchema = listingDraftSchema.pick({
+  title: true,
+  description: true,
+  condition: true,
+  defects: true,
+  instagramCaption: true,
+  tiktokCaption: true,
+  hashtags: true,
+});
 
 export type InspectionResult = z.infer<typeof inspectionResultSchema>;
 export type MarketSynthesis = z.infer<typeof marketSynthesisSchema>;
+export type ListingGeneration = z.infer<typeof listingGenerationSchema>;

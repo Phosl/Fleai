@@ -3,9 +3,14 @@ import "server-only";
 import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
-import type { ComparableDTO, HuntingReportDTO, ListingDraftDTO } from "@/lib/contracts";
+import type { ComparableDTO, HuntingReportDTO } from "@/lib/contracts";
 import { huntingReportSchema } from "@/lib/contracts";
 import { buildReport, deduplicateComparablesByUrl } from "@/lib/hunting-rules";
+import {
+  completeListingDraft,
+  createFallbackListingDraft,
+  listingPromptSource,
+} from "@/lib/ai/listing-draft";
 import {
   hasDistinctFallbackModel,
   shouldEscalateInspection,
@@ -13,6 +18,7 @@ import {
 } from "@/lib/ai/model-routing";
 import { inspectionResultSchema, listingGenerationSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 import type { InspectionResult } from "@/lib/ai/schemas";
+import { classifyProviderError } from "@/lib/ai/provider-errors";
 import { serverEnv } from "@/lib/env/server";
 
 const DISCLAIMER =
@@ -304,19 +310,65 @@ export async function generateListingDraft(input: {
   report: HuntingReportDTO;
   preferredPrice?: number;
 }) {
-  const response = await client().responses.parse({
-    model: serverEnv.openAiAnalysisModel,
-    store: false,
-    reasoning: { effort: "low" },
-    safety_identifier: safetyIdentifier(input.userId),
-    instructions: [
-      "Crea una scheda italiana accurata e copiabile per Vinted e contenuti social.",
-      "Non aggiungere dettagli non osservati. Difetti e incertezze devono restare espliciti.",
-      "Non affermare autenticità, rarità o valore come certi. Non citare il report privato né costi o margini.",
-    ].join(" "),
-    input: `Report privato da trasformare in bozza pubblica: ${JSON.stringify(input.report)}. Prezzo preferito: ${input.preferredPrice ?? input.report.resaleLikely} EUR.`,
-    text: { format: zodTextFormat(listingGenerationSchema, "fleai_listing_draft") },
-  });
-  if (!response.output_parsed) throw new Error("OPENAI_LISTING_INVALID");
-  return { draft: response.output_parsed as ListingDraftDTO, requestId: response.id };
+  async function generateWithModel(model: string) {
+    const response = await client().responses.parse({
+      model,
+      store: false,
+      reasoning: { effort: "low" },
+      safety_identifier: safetyIdentifier(input.userId),
+      instructions: [
+        "Crea una scheda italiana accurata, concreta e pronta da copiare per la vendita online.",
+        "Non aggiungere dettagli non osservati. Difetti e incertezze devono restare espliciti.",
+        "Non affermare autenticità, rarità o valore come certi. Non citare report privati, costi o margini.",
+        "Il titolo deve essere chiaro. La descrizione deve distinguere dati osservati e aspetti ancora da verificare.",
+        "Genera anche due caption brevi e hashtag pertinenti, senza promesse non verificabili.",
+      ].join(" "),
+      input: `Dati verificati da trasformare in bozza pubblica: ${JSON.stringify(listingPromptSource(input.report, input.preferredPrice))}.`,
+      text: { format: zodTextFormat(listingGenerationSchema, "fleai_listing_draft") },
+    });
+    if (!response.output_parsed) {
+      const error = new Error("OPENAI_LISTING_INVALID") as Error & { request_id?: string };
+      error.request_id = response.id;
+      throw error;
+    }
+    return {
+      draft: completeListingDraft(input.report, response.output_parsed, input.preferredPrice),
+      requestId: response.id,
+    };
+  }
+
+  const fastModel = serverEnv.openAiFastModel;
+  const fallbackModel = serverEnv.openAiAnalysisModel;
+  try {
+    const generated = await generateWithModel(fastModel);
+    return {
+      ...generated,
+      model: fastModel,
+      usedFallback: false,
+      deterministicFallback: false,
+    };
+  } catch (fastError) {
+    if (classifyProviderError(fastError) !== "invalid_output") throw fastError;
+    if (hasDistinctFallbackModel(fastModel, fallbackModel)) {
+      try {
+        const generated = await generateWithModel(fallbackModel);
+        return {
+          ...generated,
+          model: fallbackModel,
+          usedFallback: true,
+          deterministicFallback: false,
+        };
+      } catch (fallbackError) {
+        if (classifyProviderError(fallbackError) !== "invalid_output") throw fallbackError;
+      }
+    }
+
+    return {
+      draft: createFallbackListingDraft(input.report, input.preferredPrice),
+      requestId: null,
+      model: "application_fallback",
+      usedFallback: true,
+      deterministicFallback: true,
+    };
+  }
 }

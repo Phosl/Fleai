@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { zodTextFormat } from "openai/helpers/zod";
 import { comparableSchema, createAiRunSchema, createItemSchema, huntingReportSchema, inquirySchema, listingDraftSchema } from "@/lib/contracts";
 import { demoListing, demoReport } from "@/lib/demo-data";
-import { inspectionResultSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
+import { inspectionResultSchema, listingGenerationSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 
 describe("contratti strutturati", () => {
   it("valida report e bozza completi", () => {
@@ -41,6 +41,8 @@ describe("contratti strutturati", () => {
     expect(() => zodTextFormat(inspectionResultSchema, "fleai_item_inspection")).not.toThrow();
     const marketFormat = zodTextFormat(marketSynthesisSchema, "fleai_market_synthesis");
     expect(JSON.stringify(marketFormat)).not.toContain('"format":"uri"');
+    const listingFormat = zodTextFormat(listingGenerationSchema, "fleai_listing_draft");
+    expect(JSON.stringify(listingFormat)).not.toContain("vintedDescription");
   });
 
   it("richiede percentuali intere per la persistenza dei comparabili", () => {

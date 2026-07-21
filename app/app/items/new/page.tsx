@@ -7,8 +7,7 @@ import { listingDraftSchema } from "@/lib/contracts";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Camera, ArrowRight, RotateCcw } from "lucide-react";
-
-const activeRunStatuses = new Set(["queued", "moderating", "inspecting", "researching", "synthesizing", "generating", "rendering"]);
+import { isAiRunActive, isAiRunStalled } from "@/lib/ai/run-state";
 
 export default async function NewShopItemPage({ searchParams }: { searchParams: Promise<{ item?: string }> }) {
   const { item: itemId } = await searchParams;
@@ -21,15 +20,17 @@ export default async function NewShopItemPage({ searchParams }: { searchParams: 
   if (!user) notFound();
   const [{ data: item }, { data: runs }, { data: assets }] = await Promise.all([
     supabase.from("items").select("id,selected_report_id").eq("id", itemId).eq("owner_id", user.id).maybeSingle(),
-    supabase.from("analysis_runs").select("id,kind,status,result,error_code,created_at").eq("item_id", itemId).eq("owner_id", user.id).order("created_at", { ascending: false }).limit(12),
+    supabase.from("analysis_runs").select("id,kind,status,result,error_code,attempt_count,created_at,updated_at").eq("item_id", itemId).eq("owner_id", user.id).order("created_at", { ascending: false }).limit(12),
     supabase.from("media_assets").select("id,bucket_id,storage_path,alt_text,ai_generated,kind").eq("item_id", itemId).eq("owner_id", user.id).eq("bucket_id", "item-media-private").order("sort_order"),
   ]);
   if (!item) notFound();
-  const activeRun = runs?.find((run) => activeRunStatuses.has(run.status));
+  const activeRun = runs?.find((run) => isAiRunActive(run));
   if (activeRun) redirect(`/app/runs/${activeRun.id}`);
   const listingRun = runs?.find((run) => run.kind === "listing_draft" && run.status === "completed" && run.result);
   if (!listingRun?.result) {
-    const failedListingRun = runs?.find((run) => run.kind === "listing_draft" && (run.status === "failed" || run.status === "needs_input"));
+    const failedListingRun = runs?.find((run) => run.kind === "listing_draft" && (
+      run.status === "failed" || run.status === "needs_input" || isAiRunStalled(run)
+    ));
     return <ShopDraftUnavailable itemId={itemId} reportId={item.selected_report_id} failed={Boolean(failedListingRun)} />;
   }
   const listing = listingDraftSchema.safeParse(listingRun.result);

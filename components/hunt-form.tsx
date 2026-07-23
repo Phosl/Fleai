@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/env/public";
 import { clearDraftPhotos } from "@/lib/media/normalize-image";
 import { createClient } from "@/lib/supabase/client";
 import { startAiRun } from "@/lib/api/ai-runs-client";
+import { itemCategoryOptions } from "@/lib/items/labels";
 
 const DRAFT_KEY = "hunt-new";
 
@@ -122,7 +123,7 @@ export function HuntForm() {
         <p>Fai 1–3 foto e lascia almeno un riferimento oggettivo (nome, marca o descrizione breve). Aiuta molto la ricerca.</p>
         <div className="field-grid">
           <PhotoCapture draftKey={DRAFT_KEY} onChange={onPhotosChange} />
-          <div className="field"><label htmlFor="category">Categoria</label><select id="category" className="select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}><option value="fashion">Moda e accessori</option><option value="home_design">Casa e design</option><option value="collectibles">Collezionabili</option></select></div>
+          <div className="field"><label htmlFor="category">Categoria</label><select id="category" className="select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{itemCategoryOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
           <div className="field"><label htmlFor="item-name">Nome o modello</label><input id="item-name" className="input" type="text" value={form.itemName} placeholder="Es. Giubbotto in pelle, tazza campione..." onChange={(e) => setForm({ ...form, itemName: e.target.value })} /></div>
           <div className="field"><label htmlFor="brand">Marca</label><input id="brand" className="input" type="text" value={form.brand} placeholder="Es. Levi&apos;s, Polaroid..." onChange={(e) => setForm({ ...form, brand: e.target.value })} /></div>
           <div className="field field-full"><label htmlFor="search-hint">Descrizione breve <span className="muted">(obbligatoria se manca nome/marca)</span></label><textarea id="search-hint" className="textarea" placeholder="Es. pelle marrone, cuciture gialle, etichetta interna..." value={form.searchHint} onChange={(e) => setForm({ ...form, searchHint: e.target.value })} maxLength={500} /></div>

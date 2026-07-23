@@ -409,7 +409,18 @@ export type Database = {
       };
     };
     Enums: {
-      item_category: "fashion" | "home_design" | "collectibles";
+      item_category:
+        | "fashion"
+        | "home_design"
+        | "electronics"
+        | "collectibles"
+        | "art_antiques"
+        | "books_comics"
+        | "music_instruments"
+        | "toys_games"
+        | "sports_outdoor"
+        | "tools_diy"
+        | "other";
       item_status: "draft" | "published" | "reserved" | "sold" | "archived";
       moderation_status: "pending" | "approved" | "blocked";
       ai_run_kind: "hunting_report" | "listing_draft" | "marketing_images" | "social_pack";

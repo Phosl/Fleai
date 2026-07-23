@@ -8,7 +8,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { generateMarketingImages } from "@/lib/ai/images";
 import { createSocialRender } from "@/lib/social/creatomate";
 import { formatCurrency } from "@/lib/format";
-import { providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
+import { isRetryableProviderError, providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { shouldRetryResearchAfterSynthesis } from "@/lib/ai/model-routing";
 import { isMissingSchemaError } from "@/lib/database-errors";
 import { slugify } from "@/lib/slug";
@@ -454,7 +454,7 @@ export async function processAnalysisRun(runId: string) {
       }).eq("id", run.id).neq("status", "completed");
       throw cause;
     }
-    const terminal = attempt >= 3;
+    const terminal = attempt >= 3 || !isRetryableProviderError(cause);
     const errorCode = providerErrorCode(cause);
     console.error(JSON.stringify({
       scope: "analysis_run",

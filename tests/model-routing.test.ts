@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  FALLBACK_INSPECTION_IMAGE_LIMIT,
+  FAST_INSPECTION_IMAGE_LIMIT,
   hasDistinctFallbackModel,
   shouldEscalateInspection,
   shouldEscalateResearch,
@@ -14,6 +16,22 @@ describe("routing modelli AI", () => {
       identificationSpecificity: 80,
       identification: { label: "Oggetto non identificato" },
     })).toBe(true);
+    expect(shouldEscalateInspection({
+      identificationSpecificity: 80,
+      photoCoverage: 45,
+      conditionAssessable: true,
+    }, { hasAdditionalImages: true })).toBe(true);
+    expect(shouldEscalateInspection({
+      identificationSpecificity: 80,
+      photoCoverage: 80,
+      conditionAssessable: true,
+      highRiskIdentityUnverified: true,
+    })).toBe(true);
+  });
+
+  it("limita il passaggio veloce a una foto e lascia le altre al fallback capace", () => {
+    expect(FAST_INSPECTION_IMAGE_LIMIT).toBe(1);
+    expect(FALLBACK_INSPECTION_IMAGE_LIMIT).toBe(3);
   });
 
   it("usa il fallback di ricerca soltanto quando Luna non trova fonti", () => {

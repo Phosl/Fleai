@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ItemAdminControls } from "@/components/admin/item-admin-controls";
 import { Notice } from "@/components/notice";
 import { getAdminItemDetail, loadAdminData } from "@/lib/admin/data";
-import { categoryLabel, itemStatusLabel, moderationLabel } from "@/lib/admin/labels";
+import { categoryLabel, itemStatusLabel, moderationLabel } from "@/lib/items/labels";
 import { AI_GENERATED_LABEL } from "@/lib/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
 

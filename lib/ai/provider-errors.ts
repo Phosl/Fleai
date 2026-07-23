@@ -1,4 +1,11 @@
-export type ProviderErrorClass = "configuration" | "rate_limit" | "timeout" | "content" | "invalid_output" | "unknown";
+export type ProviderErrorClass =
+  | "configuration"
+  | "rate_limit"
+  | "timeout"
+  | "content"
+  | "invalid_input"
+  | "invalid_output"
+  | "unknown";
 
 type ProviderErrorShape = {
   status?: unknown;
@@ -12,9 +19,14 @@ function providerErrorShape(cause: unknown): ProviderErrorShape {
 
 export function classifyProviderError(cause: unknown): ProviderErrorClass {
   const shape = providerErrorShape(cause);
+  const providerCode = typeof shape.code === "string" ? shape.code.toLowerCase() : "";
   if (shape.status === 401 || shape.status === 403) return "configuration";
   if (shape.status === 429) return "rate_limit";
   if (shape.status === 408 || shape.status === 504) return "timeout";
+  if (
+    shape.status === 400 &&
+    /too_many_images|invalid_input|unsupported|fidelity_model/.test(providerCode)
+  ) return "invalid_input";
   const message = (cause instanceof Error ? cause.message : String(cause)).toLowerCase();
   if (message.includes("api_key") || message.includes("api key") || message.includes("not_configured") || message.includes("env_missing")) return "configuration";
   if (message.includes("rate") || message.includes("429")) return "rate_limit";
@@ -40,8 +52,15 @@ export function providerErrorCode(cause: unknown) {
     rate_limit: "PROVIDER_RATE_LIMIT",
     timeout: "PROVIDER_TIMEOUT",
     content: "PROVIDER_CONTENT_BLOCKED",
+    invalid_input: "PROVIDER_INVALID_INPUT",
     invalid_output: "PROVIDER_INVALID_OUTPUT",
     unknown: "PROVIDER_ERROR",
   };
   return codes[classification];
+}
+
+export function isRetryableProviderError(cause: unknown) {
+  return ["rate_limit", "timeout", "invalid_output", "unknown"].includes(
+    classifyProviderError(cause),
+  );
 }

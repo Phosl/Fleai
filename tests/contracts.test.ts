@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { zodTextFormat } from "openai/helpers/zod";
-import { comparableSchema, createAiRunSchema, createItemSchema, huntingReportSchema, inquirySchema, listingDraftSchema } from "@/lib/contracts";
+import { comparableSchema, createAiRunSchema, createItemSchema, huntingReportSchema, inquirySchema, ITEM_CATEGORIES, listingDraftSchema } from "@/lib/contracts";
+import { itemCategoryOptions } from "@/lib/items/labels";
 import { demoListing, demoReport } from "@/lib/demo-data";
 import { inspectionResultSchema, listingGenerationSchema, marketSynthesisSchema } from "@/lib/ai/schemas";
 
@@ -35,6 +36,20 @@ describe("contratti strutturati", () => {
       brand: "",
       searchHint: "",
     }).success).toBe(false);
+  });
+
+  it("mantiene allineati contratto e opzioni delle categorie", () => {
+    expect(itemCategoryOptions.map((option) => option.value)).toEqual(ITEM_CATEGORIES);
+    expect(new Set(itemCategoryOptions.map((option) => option.label)).size).toBe(ITEM_CATEGORIES.length);
+    for (const category of ITEM_CATEGORIES) {
+      expect(createItemSchema.safeParse({
+        category,
+        askingPrice: 20,
+        extraCosts: 0,
+        itemName: "Oggetto test",
+        notes: "",
+      }).success).toBe(true);
+    }
   });
 
   it("converte gli schemi generati nel formato Structured Outputs di OpenAI", () => {

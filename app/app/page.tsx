@@ -6,6 +6,7 @@ import { demoInquiries, demoItems } from "@/lib/demo-data";
 import { HUNTING_MONTHLY_LIMIT, SHOP_MONTHLY_LIMIT } from "@/lib/contracts";
 import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
+import { workspaceItemHref } from "@/lib/items/routes";
 
 type DashboardData = {
   total: number; live: number; value: number; open: number;
@@ -16,7 +17,7 @@ type DashboardData = {
 
 const demoData: DashboardData = {
   total: 12, live: 7, value: 624, open: 2, huntingUsed: 0, huntingLimit: 5, shopUsed: 0, shopLimit: 3,
-  items: demoItems.map((item) => ({ ...item, ai: item.ai, href: item.id === demoItems[0].id ? "/app/hunt/demo-report" : "/app/items/new" })),
+  items: demoItems.map((item) => ({ ...item, ai: item.ai, href: workspaceItemHref(item.id) })),
   latestInquiry: demoInquiries[0],
 };
 
@@ -41,7 +42,7 @@ async function getDashboardData(): Promise<DashboardData> {
     let image = "/demo-chair.svg";
     if (asset?.bucket_id === "listing-media-public") image = supabase.storage.from(asset.bucket_id).getPublicUrl(asset.storage_path).data.publicUrl;
     else if (asset) image = (await supabase.storage.from(asset.bucket_id).createSignedUrl(asset.storage_path, 3600)).data?.signedUrl ?? image;
-    return { id: item.id, slug: item.slug, title: item.title || "Oggetto in analisi", price: (item.price_cents ?? 0) / 100, image, category: item.category, ai: asset?.ai_generated ?? false, href: item.selected_report_id ? `/app/hunt/${item.selected_report_id}` : `/app/items/new?item=${item.id}` };
+    return { id: item.id, slug: item.slug, title: item.title || "Oggetto in analisi", price: (item.price_cents ?? 0) / 100, image, category: item.category, ai: asset?.ai_generated ?? false, href: workspaceItemHref(item.id) };
   }));
   const latestInquiry = inquiries?.[0];
   const latestItem = latestInquiry ? allItems?.find((item) => item.id === latestInquiry.listing_id) : undefined;

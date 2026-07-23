@@ -7,7 +7,15 @@ const defectPattern = /\b(?:difett|graff|usur|macchi|ossid|rott|strapp|sbecc|cre
 const categoryHashtags: Record<HuntingReportDTO["identification"]["category"], string[]> = {
   fashion: ["#fleai", "#secondhand", "#vintageitalia", "#modacircolare"],
   home_design: ["#fleai", "#secondhand", "#arredovintage", "#homedesign"],
+  electronics: ["#fleai", "#secondhand", "#elettronicavintage", "#techusato"],
   collectibles: ["#fleai", "#secondhand", "#collezionismo", "#vintageitalia"],
+  art_antiques: ["#fleai", "#secondhand", "#arte", "#antiquariato"],
+  books_comics: ["#fleai", "#secondhand", "#librivintage", "#fumetti"],
+  music_instruments: ["#fleai", "#secondhand", "#musicavintage", "#strumentimusicali"],
+  toys_games: ["#fleai", "#secondhand", "#giochivintage", "#giocattoli"],
+  sports_outdoor: ["#fleai", "#secondhand", "#sportusato", "#outdoor"],
+  tools_diy: ["#fleai", "#secondhand", "#faidate", "#utensilivintage"],
+  other: ["#fleai", "#secondhand", "#mercatino", "#vintageitalia"],
 };
 
 function truncate(value: string, max: number) {

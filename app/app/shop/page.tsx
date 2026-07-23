@@ -4,6 +4,7 @@ import { ItemCard } from "@/components/item-card";
 import { demoItems } from "@/lib/demo-data";
 import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
+import { workspaceItemHref } from "@/lib/items/routes";
 
 export default async function MyShopPage() {
   if (isDemoMode) return <ShopContent items={demoItems.map((item) => ({ ...item }))} shopHref="/s/officina-ritrovata" />;
@@ -27,5 +28,5 @@ export default async function MyShopPage() {
 }
 
 function ShopContent({ items, shopHref }: { items: Array<{ id: string; slug: string; title: string; price: number; image: string; category: string; status: string; ai?: boolean }>; shopHref?: string }) {
-  return <><div className="page-head"><div><span className="eyebrow">Inventario</span><h1 className="title">IL MIO SHOP.</h1><p>Bozze, annunci pubblicati e oggetti riservati.</p></div><div style={{ display: "flex", gap: 8 }}>{shopHref && <Link href={shopHref} className="button button-ghost">Apri vetrina <ArrowUpRight size={17} /></Link>}<Link href="/app/items/new" className="button button-coral"><Plus size={17} /> Nuovo</Link></div></div><div className="panel"><div className="panel-head"><h2>{items.length} oggetti</h2></div>{items.length ? <div className="item-grid">{items.map((item) => <ItemCard item={item} key={item.id} href={item.status === "published" && shopHref ? `${shopHref}/${item.slug}` : `/app/items/new?item=${item.id}`} />)}</div> : <p className="muted">Il tuo inventario è vuoto. Fotografa il primo ritrovamento.</p>}</div></>;
+  return <><div className="page-head"><div><span className="eyebrow">Inventario</span><h1 className="title">IL MIO SHOP.</h1><p>Apri un oggetto per controllarlo e scegliere la prossima azione.</p></div><div className="page-head-actions">{shopHref && <Link href={shopHref} className="button button-ghost">Apri vetrina <ArrowUpRight size={17} /></Link>}<Link href="/app/items/new" className="button button-coral"><Plus size={17} /> Nuovo</Link></div></div><div className="panel"><div className="panel-head"><h2>{items.length} oggetti</h2></div>{items.length ? <div className="item-grid">{items.map((item) => <ItemCard item={item} key={item.id} href={workspaceItemHref(item.id)} />)}</div> : <p className="muted">Il tuo inventario è vuoto. Fotografa il primo ritrovamento.</p>}</div></>;
 }

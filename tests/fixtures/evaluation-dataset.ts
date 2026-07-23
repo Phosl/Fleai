@@ -8,7 +8,7 @@ type EvaluationCase = {
   forbiddenCertainty: string[];
 };
 
-const cases: Record<ItemCategory, string[]> = {
+const cases: Partial<Record<ItemCategory, string[]>> = {
   fashion: [
     "Giacca workwear con etichetta", "Borsa firmata senza seriale", "Cappotto in lana anni Settanta", "Sneaker usurate con scatola", "Orologio fashion al quarzo", "Foulard in seta firmato", "Jeans selvedge con patch", "Impermeabile tecnico", "Camicia ricamata vintage", "Stivali in pelle con difetti", "Cintura con fibbia marcata", "Occhiali da sole senza custodia", "Maglione in cashmere", "Abito da sera senza etichetta", "Gilet workwear", "Giacca biker in pelle", "Borsa in rafia artigianale", "Cappello in feltro", "Portafoglio firmato", "Spilla costume jewelry", "Felpa band anni Novanta", "Trench con fodera", "Scarpe derby risuolate", "Kimono decorativo", "Sciarpa stampata", "Zaino tecnico", "Piumino con riparazione", "Giacca militare non regolamentata", "Completo sartoriale", "Cardigan fatto a mano",
   ],

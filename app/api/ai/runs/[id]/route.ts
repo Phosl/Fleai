@@ -6,7 +6,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const { data, error } = await supabase
       .from("analysis_runs")
-      .select("id,item_id,kind,status,progress,error_code,result,updated_at")
+      .select("id,item_id,kind,status,progress,error_code,attempt_count,result,updated_at")
       .eq("id", id)
       .eq("owner_id", user.id)
       .maybeSingle();

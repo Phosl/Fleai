@@ -12,6 +12,8 @@ import {
   listingPromptSource,
 } from "@/lib/ai/listing-draft";
 import {
+  FALLBACK_INSPECTION_IMAGE_LIMIT,
+  FAST_INSPECTION_IMAGE_LIMIT,
   hasDistinctFallbackModel,
   shouldEscalateInspection,
   shouldEscalateResearch,
@@ -64,16 +66,28 @@ function imageContent(imageUrls: string[]) {
 }
 
 export async function moderateSubmission(imageUrls: string[], notes: string) {
-  const response = await client().moderations.create({
-    model: "omni-moderation-latest",
-    input: [
-      { type: "text", text: notes || "Oggetto proposto per la rivendita" },
-      ...imageUrls.slice(0, 3).map((url) => ({ type: "image_url" as const, image_url: { url } })),
-    ],
-  });
+  const openai = client();
+  const text = notes || "Oggetto proposto per la rivendita";
+  const moderationImages = imageUrls.slice(0, 3);
+  const responses = await Promise.all(
+    moderationImages.length > 0
+      ? moderationImages.map((url) => openai.moderations.create({
+          model: "omni-moderation-latest",
+          input: [
+            { type: "text", text },
+            { type: "image_url", image_url: { url } },
+          ],
+        }))
+      : [openai.moderations.create({
+          model: "omni-moderation-latest",
+          input: [{ type: "text", text }],
+        })],
+  );
   return {
-    allowed: response.results.every((result) => !result.flagged),
-    requestId: response.id,
+    allowed: responses.every((response) =>
+      response.results.every((result) => !result.flagged)
+    ),
+    requestId: responses.map((response) => response.id).join(","),
   };
 }
 
@@ -91,7 +105,12 @@ type ModelRouteMetadata = {
   fallbackAvailable: boolean;
 };
 
-async function inspectItemWithModel(input: ItemInspectionInput, model: string, fallbackPass: boolean) {
+async function inspectItemWithModel(
+  input: ItemInspectionInput,
+  model: string,
+  fallbackPass: boolean,
+  maxImages: number,
+) {
   const contextHints = formatContextHints(input.contextHints);
   const response = await client().responses.parse({
     model,
@@ -111,7 +130,7 @@ async function inspectItemWithModel(input: ItemInspectionInput, model: string, f
       content: [
         { type: "input_text", text: `Categoria indicata: ${input.categoryHint}. Note utente: ${input.notes || "nessuna"}. Ispeziona le foto senza fare una stima economica.` },
         { type: "input_text", text: `Contesto utente: ${contextHints}` },
-        ...imageContent(input.imageUrls),
+        ...imageContent(input.imageUrls.slice(0, maxImages)),
       ],
     }],
     text: { format: zodTextFormat(inspectionResultSchema, "fleai_item_inspection") },
@@ -125,8 +144,35 @@ export async function inspectItem(input: ItemInspectionInput) {
     serverEnv.openAiFastModel,
     serverEnv.openAiAnalysisModel,
   );
-  const fast = await inspectItemWithModel(input, serverEnv.openAiFastModel, false);
-  if (!fallbackAvailable || !shouldEscalateInspection(fast.result)) {
+  let fast: Awaited<ReturnType<typeof inspectItemWithModel>>;
+  try {
+    fast = await inspectItemWithModel(
+      input,
+      serverEnv.openAiFastModel,
+      false,
+      FAST_INSPECTION_IMAGE_LIMIT,
+    );
+  } catch (fastError) {
+    const errorClass = classifyProviderError(fastError);
+    if (!fallbackAvailable || (errorClass !== "invalid_output" && errorClass !== "invalid_input")) {
+      throw fastError;
+    }
+    const fallback = await inspectItemWithModel(
+      input,
+      serverEnv.openAiAnalysisModel,
+      true,
+      FALLBACK_INSPECTION_IMAGE_LIMIT,
+    );
+    return {
+      ...fallback,
+      model: serverEnv.openAiAnalysisModel,
+      usedFallback: true,
+      fallbackAvailable,
+    } satisfies typeof fallback & ModelRouteMetadata;
+  }
+  if (!fallbackAvailable || !shouldEscalateInspection(fast.result, {
+    hasAdditionalImages: input.imageUrls.length > FAST_INSPECTION_IMAGE_LIMIT,
+  })) {
     return {
       ...fast,
       model: serverEnv.openAiFastModel,
@@ -135,7 +181,12 @@ export async function inspectItem(input: ItemInspectionInput) {
     } satisfies typeof fast & ModelRouteMetadata;
   }
 
-  const fallback = await inspectItemWithModel(input, serverEnv.openAiAnalysisModel, true);
+  const fallback = await inspectItemWithModel(
+    input,
+    serverEnv.openAiAnalysisModel,
+    true,
+    FALLBACK_INSPECTION_IMAGE_LIMIT,
+  );
   return {
     ...fallback,
     model: serverEnv.openAiAnalysisModel,

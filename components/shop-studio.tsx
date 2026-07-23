@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from "@/lib/env/public";
 import { formatCurrency } from "@/lib/format";
 import type { CreateAiRunInput, ListingDraftDTO } from "@/lib/contracts";
 import { startAiRun } from "@/lib/api/ai-runs-client";
+import { itemCategoryOptions } from "@/lib/items/labels";
 
 const demoMedia = [
   { id: "demo-real", src: "/demo-chair.svg", label: "Foto reale", ai: false },
@@ -87,7 +88,7 @@ export function ShopStudio({ itemId, initialListing = demoListing, initialMedia 
 
         {tab === "listing" && <div className="field-grid">
           <div className="field field-full"><label htmlFor="title">Titolo</label><input id="title" className="input" value={listing.title} onChange={(e) => setListing({ ...listing, title: e.target.value })} maxLength={100} /></div>
-          <div className="field"><label htmlFor="category-shop">Categoria</label><select id="category-shop" className="select" value={listing.category} onChange={(e) => setListing({ ...listing, category: e.target.value as typeof listing.category })}><option value="fashion">Moda e accessori</option><option value="home_design">Casa e design</option><option value="collectibles">Collezionabili</option></select></div>
+          <div className="field"><label htmlFor="category-shop">Categoria</label><select id="category-shop" className="select" value={listing.category} onChange={(e) => setListing({ ...listing, category: e.target.value as typeof listing.category })}>{itemCategoryOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
           <div className="field"><label htmlFor="price-shop">Prezzo</label><div style={{ position: "relative" }}><span style={{ position: "absolute", top: 13, left: 14 }}>€</span><input id="price-shop" className="input" style={{ paddingLeft: 35 }} type="number" value={listing.price} onChange={(e) => setListing({ ...listing, price: Number(e.target.value) })} /></div></div>
           <div className="field field-full"><label htmlFor="condition-shop">Condizioni reali</label><input id="condition-shop" className="input" value={listing.condition} onChange={(e) => setListing({ ...listing, condition: e.target.value })} /></div>
           <div className="field field-full"><label htmlFor="description-shop">Descrizione</label><textarea id="description-shop" className="textarea" style={{ minHeight: 180 }} value={listing.description} onChange={(e) => setListing({ ...listing, description: e.target.value })} /></div>

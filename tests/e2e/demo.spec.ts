@@ -54,6 +54,16 @@ test("Shop demo: approvazione e pubblicazione", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Sedia cantilever vintage/i })).toBeVisible();
 });
 
+test("Shop demo: il click apre la scheda privata senza avviare AI", async ({ page }) => {
+  await page.goto("/app/shop");
+  await page.getByRole("heading", { name: /Sedia cantilever vintage/i }).click();
+  await expect(page).toHaveURL(/\/app\/items\/11111111-1111-4111-8111-111111111111$/);
+  await expect(page.getByRole("heading", { name: /Sedia cantilever vintage/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Cosa vuoi fare/i })).toBeVisible();
+  await expect(page.getByText(/Aprire questa pagina non avvia ricerche o generazioni/i)).toBeVisible();
+  expect(page.url()).not.toContain("/runs/");
+});
+
 test("prenotazione anonima demo", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

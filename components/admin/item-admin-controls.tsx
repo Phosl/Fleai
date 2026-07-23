@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminMutation } from "@/lib/api/admin-mutation-client";
 import type { ItemCategory, ItemStatus, ModerationStatus } from "@/lib/contracts";
+import { itemCategoryOptions } from "@/lib/items/labels";
 
 type AdminItem = {
   title: string;
@@ -90,7 +91,7 @@ export function ItemAdminControls({ itemId, item, media }: { itemId: string; ite
         <div className="field-grid">
           <div className="field field-full"><label htmlFor="admin-item-title">Titolo</label><input id="admin-item-title" name="title" className="input" defaultValue={item.title} required /></div>
           <div className="field field-full"><label htmlFor="admin-item-description">Descrizione</label><textarea id="admin-item-description" name="description" className="textarea" defaultValue={item.description} /></div>
-          <div className="field"><label htmlFor="admin-item-category">Categoria</label><select id="admin-item-category" name="category" className="select" defaultValue={item.category}><option value="fashion">Moda</option><option value="home_design">Casa e design</option><option value="collectibles">Collezionabili</option></select></div>
+          <div className="field"><label htmlFor="admin-item-category">Categoria</label><select id="admin-item-category" name="category" className="select" defaultValue={item.category}>{itemCategoryOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div>
           <div className="field"><label htmlFor="admin-item-brand">Marca</label><input id="admin-item-brand" name="brand" className="input" defaultValue={item.brand ?? ""} /></div>
           <div className="field field-full"><label htmlFor="admin-item-condition">Condizioni</label><input id="admin-item-condition" name="condition" className="input" defaultValue={item.condition ?? ""} /></div>
           <div className="field field-full"><label htmlFor="admin-item-defects">Difetti, uno per riga</label><textarea id="admin-item-defects" name="defects" className="textarea" defaultValue={item.defects.join("\n")} /></div>

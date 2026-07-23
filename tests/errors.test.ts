@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyProviderError, providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
+import { classifyProviderError, isRetryableProviderError, providerErrorCode, providerErrorMetadata } from "@/lib/ai/provider-errors";
 import { adminDatabaseMessage, isMissingSchemaError, publicDatabaseMessage } from "@/lib/database-errors";
 
 describe("classificazione errori", () => {
@@ -22,6 +22,14 @@ describe("classificazione errori", () => {
       providerCode: "invalid_api_key",
       providerRequestId: "req_123",
     });
+  });
+
+  it("non ritenta input immagini incompatibili con lo stesso modello", () => {
+    const cause = { status: 400, code: "too_many_images" };
+    expect(classifyProviderError(cause)).toBe("invalid_input");
+    expect(providerErrorCode(cause)).toBe("PROVIDER_INVALID_INPUT");
+    expect(isRetryableProviderError(cause)).toBe(false);
+    expect(isRetryableProviderError({ status: 429, code: "rate_limit" })).toBe(true);
   });
 
   it("distingue schema mancante e privilegi insufficienti", () => {

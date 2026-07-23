@@ -32,7 +32,7 @@ export function HuntingReportView({ report, itemId }: { report: HuntingReportDTO
             <div className="price-box" style={{ background: "var(--lime)" }}><span>Più probabile</span><strong>{formatCurrency(report.resaleLikely)}</strong></div>
             <div className="price-box"><span>Stima alta</span><strong>{formatCurrency(report.resaleHigh)}</strong></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, marginTop: 10 }}>
+          <div className="report-price-secondary">
             <div className="price-box"><span>Non pagare più di</span><strong>{formatCurrency(report.suggestedMaxBuy)}</strong></div>
             <div className="price-box"><span>Margine sulla stima bassa</span><strong>{formatCurrency(report.estimatedMargin)}</strong></div>
           </div>

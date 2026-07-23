@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (existingError) throw existingError;
     if (existing) return Response.json({ runId: existing.id, status: existing.status });
 
-    if (input.kind === "listing_draft") {
+    if (input.kind === "hunting_report" || input.kind === "listing_draft") {
       const { data: previousRuns, error: previousError } = await supabase
         .from("analysis_runs")
         .select("id,status,error_code,attempt_count,updated_at")

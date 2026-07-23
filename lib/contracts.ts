@@ -1,10 +1,20 @@
 import { z } from "zod";
 
-export const itemCategorySchema = z.enum([
+export const ITEM_CATEGORIES = [
   "fashion",
   "home_design",
+  "electronics",
   "collectibles",
-]);
+  "art_antiques",
+  "books_comics",
+  "music_instruments",
+  "toys_games",
+  "sports_outdoor",
+  "tools_diy",
+  "other",
+] as const;
+
+export const itemCategorySchema = z.enum(ITEM_CATEGORIES);
 
 export const itemStatusSchema = z.enum([
   "draft",

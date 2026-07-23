@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
+import { categoryDisplayLabel } from "@/lib/items/labels";
 
 type ItemCardProps = {
   item: { slug: string; title: string; price: number; image: string; category: string; ai?: boolean };
@@ -15,7 +16,7 @@ export function ItemCard({ item, href = `/s/officina-ritrovata/${item.slug}` }: 
         {item.ai && <span className="ai-badge">Visualizzazione AI</span>}
       </div>
       <div className="item-card-body">
-        <div className="item-card-meta"><span>{item.category}</span><span>Second hand</span></div>
+        <div className="item-card-meta"><span>{categoryDisplayLabel(item.category)}</span><span>Second hand</span></div>
         <h3>{item.title}</h3>
         <span className="item-card-price">{formatCurrency(item.price)}</span>
       </div>

@@ -40,6 +40,7 @@ test("Hunting demo: foto, ripristino e report", async ({ page }) => {
   const photo = await page.screenshot({ type: "jpeg", quality: 80 });
   await page.getByLabel("Aggiungi foto 1").setInputFiles({ name: "oggetto.jpg", mimeType: "image/jpeg", buffer: photo });
   await expect(page.getByText("(1/3)")).toBeVisible();
+  await page.getByLabel("Nome o modello").fill("Sedia cantilever vintage");
   await page.getByRole("button", { name: /Cerca e valuta/i }).click();
   await expect(page).toHaveURL(/demo-report/);
   await expect(page.getByText(/Buon acquisto per rivendita/i)).toBeVisible();
@@ -64,25 +65,40 @@ test("Shop demo: il click apre la scheda privata senza avviare AI", async ({ pag
   expect(page.url()).not.toContain("/runs/");
 });
 
-test("prenotazione anonima demo", async ({ page }) => {
+test("workspace responsive senza overflow e azioni oggetto subito visibili", async ({ page }) => {
+  const routes = [
+    "/app",
+    "/app/shop",
+    "/app/items/11111111-1111-4111-8111-111111111111",
+    "/app/hunt/new",
+    "/app/items/new",
+  ];
+
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 800 : 1000 });
+    for (const route of routes) {
+      await page.goto(route);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `overflow ${route} a ${width}px`).toBeLessThanOrEqual(1);
+    }
+  }
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/app/items/11111111-1111-4111-8111-111111111111");
+  const actions = await page.getByRole("heading", { name: /Cosa vuoi fare/i }).boundingBox();
+  const photos = await page.getByRole("heading", { name: /Foto dell’oggetto/i }).boundingBox();
+  expect(actions?.y ?? Infinity).toBeLessThan(photos?.y ?? 0);
+  await expect(page.locator(".mobile-bottom-nav")).toBeVisible();
+});
+
+test("un annuncio demo è dichiarato e non accetta prenotazioni reali", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/s/officina-ritrovata/sedia-cesca-vintage");
-  await page.getByLabel("Nome").fill("Ada Rossi");
-  await page.getByLabel("Email").fill("ada@example.com");
-  await page.getByLabel("Messaggio").fill("Ciao, l’oggetto è ancora disponibile?");
-  await page.getByLabel(/Acconsento/).check();
-  const validity = await page.locator("form.inquiry-form").evaluate((form) => ({
-    valid: (form as HTMLFormElement).checkValidity(),
-    invalid: [...form.querySelectorAll(":invalid")].map((element) => (element as HTMLInputElement).name),
-  }));
-  expect(validity).toEqual({ valid: true, invalid: [] });
-  const submit = page.getByRole("button", { name: /Invia richiesta/i });
-  await expect(submit).toBeEnabled();
-  await submit.click();
-  await page.waitForTimeout(1_000);
+  await expect(page.getByRole("heading", { name: "Questo è un annuncio demo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Crea un annuncio" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Invia richiesta/i })).toHaveCount(0);
   expect(pageErrors).toEqual([]);
-  await expect(page.getByRole("heading", { name: "Richiesta inviata" })).toBeVisible({ timeout: 10_000 });
 });
 
 test("layout senza overflow a 360, 768 e 1440 px", async ({ page }) => {
@@ -93,4 +109,30 @@ test("layout senza overflow a 360, 768 e 1440 px", async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `overflow orizzontale a ${width}px`).toBeLessThanOrEqual(1);
   }
+});
+
+test("SEO e GEO pubblici espongono solo contenuti indicizzabili", async ({ page, request }) => {
+  await page.goto("/");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
+  const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+  expect(jsonLd).toContain("FAQPage");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
+  await page.goto("/come-funziona");
+  await expect(page.getByRole("heading", { name: /DALLA FOTO A UNA DECISIONE/i })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
+  const robots = await (await request.get("/robots.txt")).text();
+  expect(robots).toContain("User-Agent: OAI-SearchBot");
+  expect(robots).toContain("Disallow: /app");
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain("/come-funziona");
+  expect(sitemap).not.toContain("/app/");
+  expect(sitemap).not.toContain("/login");
+
+  const llms = await (await request.get("/llms.txt")).text();
+  expect(llms).toContain("Confidence");
+  expect(llms).toContain("info@voxels.it");
 });

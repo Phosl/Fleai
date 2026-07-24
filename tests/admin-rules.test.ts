@@ -7,7 +7,7 @@ import {
   adminUserUpdateSchema,
 } from "@/lib/contracts";
 import { assertAdminTargetCanBeSuspended, canAdminTransitionItem } from "@/lib/admin/rules";
-import { safeAuthNextPath } from "@/lib/auth/redirect";
+import { authCallbackUrl, safeAuthNextPath } from "@/lib/auth/redirect";
 
 describe("regole Super Admin", () => {
   it("consente solo transizioni commerciali coerenti", () => {
@@ -44,5 +44,15 @@ describe("regole Super Admin", () => {
     expect(safeAuthNextPath("//evil.example/admin")).toBe("/app");
     expect(safeAuthNextPath("/\\evil.example/admin")).toBe("/app");
     expect(safeAuthNextPath("/privacy")).toBe("/app");
+  });
+
+  it("costruisce il callback Auth sull’origine realmente aperta", () => {
+    expect(authCallbackUrl("https://fleai.vercel.app", "/app/shop")).toBe(
+      "https://fleai.vercel.app/auth/callback?next=%2Fapp%2Fshop",
+    );
+    expect(authCallbackUrl("http://localhost:3000", "//evil.example/admin")).toBe(
+      "http://localhost:3000/auth/callback?next=%2Fapp",
+    );
+    expect(() => authCallbackUrl("javascript:alert(1)", "/app")).toThrow("AUTH_ORIGIN_INVALID");
   });
 });

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppNav, MobileAppNav } from "@/components/app-nav";
@@ -6,6 +7,11 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
 import { readUserAccessProfile } from "@/lib/api/auth";
+
+export const metadata: Metadata = {
+  title: "Workspace",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   let displayName = "Filippo";

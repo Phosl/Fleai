@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
@@ -10,6 +11,10 @@ import { isDemoMode } from "@/lib/env/server";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Super Admin",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (isDemoMode) {

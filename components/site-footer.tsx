@@ -9,7 +9,8 @@ export function SiteFooter() {
           <div>
             <h3>Fleai</h3>
             <div className="footer-links">
-              <Link href="/#come-funziona">Come funziona</Link>
+              <Link href="/#come-funziona">Prodotto</Link>
+              <Link href="/come-funziona">Metodo e affidabilità</Link>
               <Link href="/app/hunt/new">Flea Market Hunting</Link>
               <Link href="/app/items/new">Flea Market Shop</Link>
             </div>
@@ -19,7 +20,7 @@ export function SiteFooter() {
             <div className="footer-links">
               <Link href="/privacy">Privacy</Link>
               <Link href="/termini">Termini</Link>
-              <a href="mailto:ciao@fleai.it">ciao@fleai.it</a>
+              <a href="mailto:info@voxels.it">info@voxels.it</a>
             </div>
           </div>
         </div>

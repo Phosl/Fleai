@@ -8,7 +8,8 @@ export function SiteHeader() {
       <div className="container site-header-inner">
         <Logo />
         <nav className="site-nav" aria-label="Navigazione principale">
-          <Link href="/#come-funziona">Come funziona</Link>
+          <Link href="/#come-funziona">Prodotto</Link>
+          <Link href="/come-funziona">Metodo</Link>
           <Link href="/s/officina-ritrovata">Esplora shop</Link>
           <Link href="/login" className="button button-sm">
             Entra <ArrowUpRight size={15} aria-hidden="true" />

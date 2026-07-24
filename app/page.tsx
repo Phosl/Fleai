@@ -1,16 +1,76 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, Camera, Check, Search, ShoppingBag, Sparkles, Tags } from "lucide-react";
 import { ItemCard } from "@/components/item-card";
+import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { demoItems, demoReport } from "@/lib/demo-data";
 import { formatCurrency } from "@/lib/format";
+import { absoluteUrl, HOME_FAQS, pageMetadata, SITE_DESCRIPTION, SITE_EMAIL, SITE_NAME } from "@/lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Fleai — Valuta e rivendi oggetti trovati al mercatino",
+  description: SITE_DESCRIPTION,
+  path: "/",
+});
 
 export default function HomePage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${absoluteUrl("/")}#website`,
+        url: absoluteUrl("/"),
+        name: SITE_NAME,
+        description: SITE_DESCRIPTION,
+        inLanguage: "it-IT",
+      },
+      {
+        "@type": "Organization",
+        "@id": `${absoluteUrl("/")}#organization`,
+        name: SITE_NAME,
+        url: absoluteUrl("/"),
+        logo: {
+          "@type": "ImageObject",
+          url: absoluteUrl("/icon.svg"),
+        },
+        email: SITE_EMAIL,
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${absoluteUrl("/")}#app`,
+        name: SITE_NAME,
+        url: absoluteUrl("/"),
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Qualsiasi sistema con browser moderno",
+        inLanguage: "it-IT",
+        description: SITE_DESCRIPTION,
+        featureList: [
+          "Identificazione di oggetti da una a tre foto",
+          "Ricerca di comparabili con URL e data",
+          "Stima prudente di prezzo, margine e ROI",
+          "Creazione di bozze annuncio e immagini AI segnalate",
+          "Shop pubblico senza checkout",
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: HOME_FAQS.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: { "@type": "Answer", text: faq.answer },
+        })),
+      },
+    ],
+  };
+
   return (
     <>
       <SiteHeader />
+      <JsonLd data={structuredData} />
       <main id="main">
         <section className="hero">
           <div className="container hero-grid">
@@ -95,6 +155,52 @@ export default function HomePage() {
               <div className="step"><Camera size={26} /><h3>Scatta da 1 a 3 foto</h3><p>Fronte, retro, marchi e difetti. Le immagini reali restano sempre separate da quelle generate.</p></div>
               <div className="step"><Sparkles size={26} /><h3>Fleai ricerca e confronta</h3><p>Analizza i dettagli visibili e cerca annunci comparabili, mostrando link, data e tipo di prezzo.</p></div>
               <div className="step"><Tags size={26} /><h3>Decidi o pubblica</h3><p>Usa la stima al mercatino oppure trasforma il report in una bozza pronta da controllare.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" aria-labelledby="fleai-in-breve">
+          <div className="container">
+            <div className="section-head">
+              <div><span className="eyebrow">Fleai in breve</span><h2 className="title" id="fleai-in-breve">DATI UTILI.<br />LIMITI CHIARI.</h2></div>
+              <p>Una ricerca assistita per prendere decisioni più informate, non una scorciatoia che nasconde l’incertezza.</p>
+            </div>
+            <div className="fact-grid">
+              <article className="fact-card">
+                <span>01</span>
+                <h3>Fonti verificabili</h3>
+                <p>I comparabili mostrano URL, data, valuta e natura del prezzo: richiesto, venduto o non verificabile.</p>
+              </article>
+              <article className="fact-card">
+                <span>02</span>
+                <h3>Stime prudenti</h3>
+                <p>Sotto 50/100 di affidabilità Fleai chiede più informazioni. Con meno di due comparabili validi l’affidabilità resta bassa.</p>
+              </article>
+              <article className="fact-card">
+                <span>03</span>
+                <h3>Controllo umano</h3>
+                <p>Prima di pubblicare, il venditore conferma descrizione, condizioni, difetti, prezzo e media visibili.</p>
+              </article>
+            </div>
+            <div className="section-cta">
+              <Link className="button button-ghost" href="/come-funziona">Leggi metodo e criteri <ArrowRight size={17} /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="section faq-section" aria-labelledby="domande-frequenti">
+          <div className="container">
+            <div className="section-head">
+              <div><span className="eyebrow">Risposte dirette</span><h2 className="title" id="domande-frequenti">DOMANDE<br />FREQUENTI.</h2></div>
+              <p>Le informazioni essenziali su analisi, categorie, autenticità e immagini generate.</p>
+            </div>
+            <div className="faq-list">
+              {HOME_FAQS.map((faq) => (
+                <details key={faq.question}>
+                  <summary>{faq.question}</summary>
+                  <p>{faq.answer}</p>
+                </details>
+              ))}
             </div>
           </div>
         </section>

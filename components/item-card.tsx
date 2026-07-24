@@ -6,13 +6,14 @@ import { categoryDisplayLabel } from "@/lib/items/labels";
 type ItemCardProps = {
   item: { slug: string; title: string; price: number; image: string; category: string; ai?: boolean };
   href?: string;
+  priority?: boolean;
 };
 
-export function ItemCard({ item, href = `/s/officina-ritrovata/${item.slug}` }: ItemCardProps) {
+export function ItemCard({ item, href = `/s/officina-ritrovata/${item.slug}`, priority = false }: ItemCardProps) {
   return (
     <Link className="item-card" href={href}>
       <div className="item-card-image">
-        <Image src={item.image} alt={item.title} fill sizes="(max-width: 720px) 100vw, 33vw" />
+        <Image src={item.image} alt={item.title} fill priority={priority} sizes="(max-width: 720px) 100vw, 33vw" />
         {item.ai && <span className="ai-badge">Visualizzazione AI</span>}
       </div>
       <div className="item-card-body">

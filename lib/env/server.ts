@@ -1,6 +1,7 @@
 import "server-only";
 
 import { publicEnv } from "@/lib/env/public";
+import { absoluteUrl } from "@/lib/seo";
 
 export const serverEnv = {
   ...publicEnv,
@@ -16,7 +17,7 @@ export const serverEnv = {
   emailFrom: process.env.EMAIL_FROM ?? "Fleai <info@voxels.it>",
   turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY,
   internalWorkerSecret: process.env.INTERNAL_WORKER_SECRET,
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  appUrl: absoluteUrl("/"),
 };
 
 export const isDemoMode = !(

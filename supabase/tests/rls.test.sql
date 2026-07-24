@@ -97,10 +97,30 @@ select is((select count(*)::integer from public.admin_audit_logs), 1, 'admin can
 
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
-select is((select count(*)::integer from public.items where id = '40000000-0000-4000-8000-000000000004'), 1, 'anonymous reads published approved item');
-select is((select count(*)::integer from public.profiles), 0, 'anonymous cannot read profiles');
-select is((select count(*)::integer from public.hunting_reports), 0, 'anonymous cannot read reports');
-select is((select count(*)::integer from public.admin_audit_logs), 0, 'anonymous cannot read admin audit');
+select throws_ok(
+  $$select count(*) from public.items where id = '40000000-0000-4000-8000-000000000004'$$,
+  '42501',
+  null,
+  'anonymous cannot query the base item table; public pages expose a normalized server DTO'
+);
+select throws_ok(
+  $$select count(*) from public.profiles$$,
+  '42501',
+  null,
+  'anonymous cannot query profiles'
+);
+select throws_ok(
+  $$select count(*) from public.hunting_reports$$,
+  '42501',
+  null,
+  'anonymous cannot query private reports'
+);
+select throws_ok(
+  $$select count(*) from public.admin_audit_logs$$,
+  '42501',
+  null,
+  'anonymous cannot query admin audit'
+);
 select is((select count(*)::integer from storage.objects where bucket_id = 'listing-media-public'), 1, 'anonymous reads public listing media');
 select is((select count(*)::integer from storage.objects where bucket_id = 'item-media-private'), 0, 'anonymous cannot read private media');
 

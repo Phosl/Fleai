@@ -5,6 +5,7 @@ import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env/public";
 import { createClient } from "@/lib/supabase/client";
+import { authCallbackUrl } from "@/lib/auth/redirect";
 
 type AuthMode = "sign-in" | "sign-up";
 type PendingAction = "password" | "email-link" | "google";
@@ -85,7 +86,18 @@ function PasswordField({
 
 function passwordErrorMessage(mode: AuthMode, code?: string) {
   if (code === "weak_password") return "La password non rispetta i requisiti di sicurezza. Scegline una più robusta.";
-  if (code === "over_request_rate_limit") return "Troppi tentativi. Attendi qualche minuto e riprova.";
+  if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit") {
+    return "Troppi tentativi o email inviate. Attendi qualche minuto e riprova.";
+  }
+  if (code === "user_already_exists" || code === "user_already_registered") {
+    return "Esiste già un account con questa email. Accedi oppure richiedi il link senza password.";
+  }
+  if (code === "email_address_invalid" || code === "validation_failed") {
+    return "L’indirizzo email non è valido. Controllalo e riprova.";
+  }
+  if (code === "signup_disabled" || code === "email_provider_disabled") {
+    return "La registrazione via email non è disponibile in questo momento.";
+  }
   return mode === "sign-in"
     ? "Email o password non corretti. Controlla i dati e riprova."
     : "Non siamo riusciti a creare l’account. Controlla i dati e riprova.";
@@ -130,48 +142,54 @@ export function AuthForm({ nextPath = "/app", initialError }: { nextPath?: strin
 
   async function submitPassword(event: React.FormEvent) {
     event.preventDefault();
-    if (!isSupabaseConfigured) {
-      openWorkspace();
-      return;
-    }
     if (mode === "sign-up" && password !== confirmPassword) {
       setState("error");
       setMessage("Le password non coincidono.");
       return;
     }
+    if (!isSupabaseConfigured) {
+      openWorkspace();
+      return;
+    }
 
     setPending("password");
     setMessage("");
-    const supabase = createClient();
-    if (mode === "sign-in") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      setPending(null);
+    try {
+      const supabase = createClient();
+      const normalizedEmail = email.trim().toLowerCase();
+      if (mode === "sign-in") {
+        const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (error) {
+          setState("error");
+          setMessage(passwordErrorMessage(mode, error.code));
+          return;
+        }
+        openWorkspace();
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: { emailRedirectTo: authCallbackUrl(window.location.origin, nextPath) },
+      });
       if (error) {
         setState("error");
         setMessage(passwordErrorMessage(mode, error.code));
         return;
       }
-      openWorkspace();
-      return;
-    }
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}` },
-    });
-    setPending(null);
-    if (error) {
+      if (data.session) {
+        openWorkspace();
+        return;
+      }
+      setState("sent");
+      setMessage("Account creato. Controlla la tua email per confermarlo.");
+    } catch {
       setState("error");
-      setMessage(passwordErrorMessage(mode, error.code));
-      return;
+      setMessage("Connessione interrotta durante l’accesso. Riprova tra poco.");
+    } finally {
+      setPending(null);
     }
-    if (data.session) {
-      openWorkspace();
-      return;
-    }
-    setState("sent");
-    setMessage("Account creato. Controlla la tua email per confermarlo.");
   }
 
   async function sendEmailLink() {
@@ -186,25 +204,31 @@ export function AuthForm({ nextPath = "/app", initialError }: { nextPath?: strin
 
     setPending("email-link");
     setMessage("");
-    const { error } = await createClient().auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-        shouldCreateUser: mode === "sign-up",
-      },
-    });
-    setPending(null);
-    if (error) {
+    try {
+      const { error } = await createClient().auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: authCallbackUrl(window.location.origin, nextPath),
+          shouldCreateUser: mode === "sign-up",
+        },
+      });
+      if (error) {
+        setState("error");
+        setMessage(passwordErrorMessage(mode, error.code));
+        return;
+      }
+      setState("sent");
+      setMessage(content.sentMessage);
+    } catch {
       setState("error");
-      setMessage("Non siamo riusciti a inviare il link. Controlla l’email e riprova.");
-      return;
+      setMessage("Connessione interrotta durante l’invio. Riprova tra poco.");
+    } finally {
+      setPending(null);
     }
-    setState("sent");
-    setMessage(content.sentMessage);
   }
 
   async function signInWithGoogle() {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured || !publicEnv.googleAuthEnabled) {
       openWorkspace();
       return;
     }
@@ -212,7 +236,7 @@ export function AuthForm({ nextPath = "/app", initialError }: { nextPath?: strin
     setMessage("");
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}` },
+      options: { redirectTo: authCallbackUrl(window.location.origin, nextPath) },
     });
     if (error) {
       setPending(null);
@@ -259,10 +283,14 @@ export function AuthForm({ nextPath = "/app", initialError }: { nextPath?: strin
         <p className="auth-description">{content.description}</p>
       </div>
 
-      <button type="button" className="button button-wide button-white auth-google" disabled={pending !== null} onClick={signInWithGoogle}>
-        {pending === "google" ? <><span className="spinner" /> Apertura Google</> : <>G&nbsp; {content.googleLabel}</>}
-      </button>
-      <div className="auth-divider">oppure</div>
+      {publicEnv.googleAuthEnabled && (
+        <>
+          <button type="button" className="button button-wide button-white auth-google" disabled={pending !== null} onClick={signInWithGoogle}>
+            {pending === "google" ? <><span className="spinner" /> Apertura Google</> : <>G&nbsp; {content.googleLabel}</>}
+          </button>
+          <div className="auth-divider">oppure</div>
+        </>
+      )}
 
       <form onSubmit={submitPassword} className="auth-credentials-form">
         <div className="field">

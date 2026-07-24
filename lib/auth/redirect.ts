@@ -10,3 +10,13 @@ export function safeAuthNextPath(value: string | null | undefined) {
     return "/app";
   }
 }
+
+export function authCallbackUrl(origin: string, nextPath: string) {
+  const parsedOrigin = new URL(origin);
+  if (parsedOrigin.protocol !== "http:" && parsedOrigin.protocol !== "https:") {
+    throw new Error("AUTH_ORIGIN_INVALID");
+  }
+  const callback = new URL("/auth/callback", parsedOrigin.origin);
+  callback.searchParams.set("next", safeAuthNextPath(nextPath));
+  return callback.toString();
+}
